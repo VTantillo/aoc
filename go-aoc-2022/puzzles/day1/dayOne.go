@@ -1,4 +1,4 @@
-package puzzles
+package day1
 
 import (
 	"bufio"
@@ -9,7 +9,7 @@ import (
 	"strconv"
 )
 
-func readInput() []int {
+func readDay1Input() []int {
 	f, err := os.Open("./res/day1.txt")
 
 	if err != nil {
@@ -66,40 +66,15 @@ func calculateElfCalories(meals []int) []int {
 }
 
 func Day1Step1() int {
-	meals := readInput()
+	meals := readDay1Input()
 	mealTotals := calculateElfCalories(meals)
 	max := mealTotals[len(mealTotals)-1]
-
-	// 	meal := scanner.Text()
-
-	// 	if meal == "" {
-	// 		fmt.Printf("Elf's total was %v\n", elfTotal)
-	// 		elfCalories = append(elfCalories, elfTotal)
-	// 		elfTotal = 0
-	// 		continue
-	// 	}
-
-	// 	intVar, err := strconv.Atoi(meal)
-	// 	if err != nil {
-	// 		log.Fatalf("Unexpected input %v\n", err)
-	// 	}
-
-	// 	elfTotal += intVar
-	// }
-
-	// max := 0
-	// for i, c := range elfCalories {
-	// 	fmt.Printf("Elf %v had %v calories\n", i, c)
-	// 	if max < c {
-	// 		max = c
-	// 	}
-	// }
 
 	return max
 }
 
 func Day1Step2() int {
-	meals := readInput()
+	meals := readDay1Input()
 	mealTotals := calculateElfCalories(meals)
 
 	max := 0

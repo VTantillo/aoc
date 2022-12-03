@@ -1,17 +1,7 @@
 package main
 
-import (
-	"fmt"
-
-	"go-aoc-2022/puzzles"
-)
+import "go-aoc-2022/puzzles/day2"
 
 func main() {
-	step1 := puzzles.Day1Step1()
-
-	fmt.Printf("Highest total: %v\n", step1)
-
-	step2 := puzzles.Day1Step2()
-
-	fmt.Printf("Highest 3 elves total: %v\n", step2)
+	day2.Step2()
 }
