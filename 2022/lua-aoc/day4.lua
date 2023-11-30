@@ -43,7 +43,7 @@ local example = [[
 ]]
 
 local lines = {}
-for line in io.lines("../input/day-4-pt-1.txt") do
+for line in io.lines("../input/day-4.txt") do
 	table.insert(lines, line)
 end
 
