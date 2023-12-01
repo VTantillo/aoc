@@ -6,11 +6,11 @@ import (
 )
 
 func TestDay1(t *testing.T) {
-	input := utils.ReadInput("../../inputs/ex-day-1.txt")
+	input := utils.ReadInput("../../inputs/ex2-day-1.txt")
 
 	result := Day1(input)
 
-	if result != 142 {
-		t.Fatalf("Result should be 142, got=%v", result)
+	if result != 281 {
+		t.Fatalf("Result should be 281, got=%v", result)
 	}
 }
