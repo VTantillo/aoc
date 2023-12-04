@@ -134,31 +134,31 @@ def find_other_ratio(
         if second_num[0] == num:
             second_num = (0, 0, 0)
     if not last_row and is_digit(input[line_num + 1][char_num]):
-        second_num = find_number(symbols, input, line_num - 1, char_num)
+        second_num = find_number(symbols, input, line_num + 1, char_num)
         if second_num[0] == num:
             second_num = (0, 0, 0)
     if not first_row and not first_col and is_digit(input[line_num - 1][char_num - 1]):
-        second_num = find_number(symbols, input, line_num - 1, char_num)
+        second_num = find_number(symbols, input, line_num - 1, char_num - 1)
         if second_num[0] == num:
             second_num = (0, 0, 0)
     if not last_row and not first_col and is_digit(input[line_num + 1][char_num - 1]):
-        second_num = find_number(symbols, input, line_num - 1, char_num)
+        second_num = find_number(symbols, input, line_num + 1, char_num - 1)
         if second_num[0] == num:
             second_num = (0, 0, 0)
     if not first_col and is_digit(input[line_num][char_num - 1]):
-        second_num = find_number(symbols, input, line_num - 1, char_num)
+        second_num = find_number(symbols, input, line_num, char_num - 1)
         if second_num[0] == num:
             second_num = (0, 0, 0)
     if not first_row and not last_col and is_digit(input[line_num - 1][char_num + 1]):
-        second_num = find_number(symbols, input, line_num - 1, char_num)
+        second_num = find_number(symbols, input, line_num - 1, char_num + 1)
         if second_num[0] == num:
             second_num = (0, 0, 0)
     if not last_row and not last_col and is_digit(input[line_num + 1][char_num + 1]):
-        second_num = find_number(symbols, input, line_num - 1, char_num)
+        second_num = find_number(symbols, input, line_num + 1, char_num + 1)
         if second_num[0] == num:
             second_num = (0, 0, 0)
     if not last_col and is_digit(input[line_num][char_num + 1]):
-        second_num = find_number(symbols, input, line_num - 1, char_num)
+        second_num = find_number(symbols, input, line_num, char_num + 1)
         if second_num[0] == num:
             second_num = (0, 0, 0)
 
@@ -199,6 +199,5 @@ def find_number(
         num_start += 1
     num = int(input[line_num][num_start:num_end])
     num_end -= 1
-    print(f"num start: {num_start}, num end: {num_end}, line num: {line_num} - {num}")
 
     return (num, num_start, num_end)
