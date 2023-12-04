@@ -9,16 +9,13 @@ def day_3(input: list[str]) -> int:
             ):
                 symbols.add(char)
 
-    print(symbols)
-
     part_numbers = []
 
     for l_num, line in enumerate(input):
         is_in_number = False
         line_numbers = []
-        print(line)
         for c_num, char in enumerate(line):
-            if char == ".":
+            if char == "." or char in symbols:
                 is_in_number = False
             elif is_digit(char) and not is_in_number:
                 is_in_number = True
@@ -26,8 +23,6 @@ def day_3(input: list[str]) -> int:
                 if part_num != -1:
                     line_numbers.append(part_num)
         part_numbers.extend(line_numbers)
-        # print(line_numbers, "line", len(line_numbers), "total", len(part_numbers))
-        print("-----")
 
     sum = 0
     for n in part_numbers:
@@ -89,5 +84,4 @@ def find_part_number(
             if not last_col and input[line_num][i + 1] in symbols:
                 return num
 
-    print(f"{num} is not a part number")
     return -1
