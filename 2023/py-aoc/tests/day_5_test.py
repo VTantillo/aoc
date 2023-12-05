@@ -12,15 +12,15 @@ from aoc.puzzles.day_5 import (
     get_dst,
     get_range_map,
     get_seeds,
-    part_1,
 )
+from aoc.puzzles.day_5_2 import take_2
 from aoc.utils.util import read_input
 
 
 def test_part_1():
     input = read_input("../inputs/day5-ex.txt")
-    result = part_1(input)
-    assert result == 35
+    result = take_2(input)
+    assert result == 46
 
 
 def test_get_seeds():
