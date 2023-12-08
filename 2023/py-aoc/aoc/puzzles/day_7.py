@@ -1,5 +1,6 @@
-from pydantic import BaseModel
 from functools import cmp_to_key
+
+from pydantic import BaseModel
 from rich import print
 
 
@@ -103,7 +104,6 @@ def count_cards(cards: str) -> dict[str, int]:
     for card in hand_set:
         card_map[card] = cards.count(card)
 
-    print("cards", cards, "set", hand_set, "map", card_map)
     return card_map
 
 
@@ -120,8 +120,6 @@ def check_pair(card_map: dict[str, int]) -> bool:
 
 def check_two_pair(card_map: dict[str, int]) -> bool:
     jokers = card_map.get("J") or 0
-    if jokers != 0:
-        card_map.pop("J")
 
     one_pair = False
 
