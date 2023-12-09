@@ -154,12 +154,26 @@ def check_three_of_a_kind(card_map: dict[str, int]) -> bool:
 def check_full_house(card_map: dict[str, int]) -> bool:
     jokers = card_map.get("J") or 0
 
+    found_pair = False
+    found_three = False
+
     for k, v in card_map.items():
         count = v + jokers
-        if k != "J" and count == 4:
-            return True
+        if k != "J" and v == 2 and not found_pair:
+            found_pair = True
 
-    return False
+        elif k != "J" and v == 3 and not found_three:
+            found_three = True
+
+        elif k != "J" and count == 2 and not found_pair:
+            found_pair = True
+            jokers = 0
+
+        elif k != "J" and count == 3 and not found_three:
+            found_three = True
+            jokers = 0
+
+    return found_pair and found_three
 
 
 def check_four_of_a_kind(card_map: dict[str, int]) -> bool:

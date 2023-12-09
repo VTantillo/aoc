@@ -37,20 +37,22 @@ def test_part_2():
 
 def test_pair():
     card_map = {"A": 1, "K": 1, "2": 1, "J": 1, "4": 1}
-    result = check_pair(card_map)
-    assert result is True
+    assert check_pair(card_map)
 
 
 def test_two_pair():
-    card_map = {"K": 2, "6": 1, "7": 1, "J": 1}
-    result = check_two_pair(card_map)
-    assert result is True
+    card_map_1 = {"K": 2, "6": 2}
+    assert check_two_pair(card_map_1)
+
+
+def test_full_house():
+    card_map = {"K": 3, "6": 1, "7": 1, "J": 1}
+    assert check_two_pair(card_map)
 
 
 def test_four_of_a_kind():
     card_map = {"J": 1, "4": 3, "2": 1}
-    result = check_four_of_a_kind(card_map)
-    assert result is True
+    assert check_four_of_a_kind(card_map)
 
 
 def test_count_cards():
