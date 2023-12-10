@@ -39,12 +39,23 @@ var ex2b = [][]rune{
 }
 
 func TestDay10Pt1(t *testing.T) {
-	input := utils.ReadInput("../../inputs/day10-ex.txt")
+	input := utils.ReadInput("../../inputs/day10-ex2.txt")
 
 	result := Day10Pt1(input)
 
-	if result != 114 {
-		t.Fatalf("Result should be 114, got=%v", result)
+	if result != 8 {
+		t.Fatalf("Total loop steps should be 8, got=%v", result)
+	}
+}
+
+func TestFindLoop(t *testing.T) {
+	myMap := navMap{cellMap: makeCellMap(ex2a)}
+	myMap.init()
+
+	result := myMap.findLoop(east)
+
+	if len(result) != 16 {
+		t.Fatalf("Total loop steps should be 16, got=%v", len(result))
 	}
 }
 
