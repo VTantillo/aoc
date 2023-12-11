@@ -294,23 +294,23 @@ func Day10Pt1(input []string) int {
 }
 
 func Day10Pt2(input []string) int {
-	// pipeMap := parseDay10(input)
+	pipeMap := parseDay10(input)
 
-	ex3 := [][]rune{
-		{'.', '.', '.', '.', '.', '.', '.', '.', '.', '.'},
-		{'.', 'S', '-', '-', '-', '-', '-', '-', '7', '.'},
-		{'.', '|', 'F', '-', '-', '-', '-', '7', '|', '.'},
-		{'.', '|', '|', '.', '.', '.', '.', '|', '|', '.'},
-		{'.', '|', '|', '.', '.', '.', '.', '|', '|', '.'},
-		{'.', '|', 'L', '-', '7', 'F', '-', 'J', '|', '.'},
-		{'.', '|', '.', '.', '|', '|', '.', '.', '|', '.'},
-		{'.', 'L', '-', '-', 'J', 'L', '-', '-', 'J', '.'},
-		{'.', '.', '.', '.', '.', '.', '.', '.', '.', '.'},
-	}
+	// ex3 := [][]rune{
+	// 	{'.', '.', '.', '.', '.', '.', '.', '.', '.', '.'},
+	// 	{'.', 'S', '-', '-', '-', '-', '-', '-', '7', '.'},
+	// 	{'.', '|', 'F', '-', '-', '-', '-', '7', '|', '.'},
+	// 	{'.', '|', '|', '.', '.', '.', '.', '|', '|', '.'},
+	// 	{'.', '|', '|', '.', '.', '.', '.', '|', '|', '.'},
+	// 	{'.', '|', 'L', '-', '7', 'F', '-', 'J', '|', '.'},
+	// 	{'.', '|', '.', '.', '|', '|', '.', '.', '|', '.'},
+	// 	{'.', 'L', '-', '-', 'J', 'L', '-', '-', 'J', '.'},
+	// 	{'.', '.', '.', '.', '.', '.', '.', '.', '.', '.'},
+	// }
 
-	printPipeMap(ex3)
+	printPipeMap(pipeMap)
 
-	myMap := navMap{cellMap: makeCellMap(ex3)}
+	myMap := navMap{cellMap: makeCellMap(pipeMap)}
 	myMap.init()
 
 	var startingDirections []direction
@@ -322,11 +322,12 @@ func Day10Pt2(input []string) int {
 
 	loop := myMap.findLoop(startingDirections[0])
 
-	printPipeLoop(loop, ex3)
+	fmt.Println("--------")
+	printPipeLoop(loop, pipeMap)
 
-	expandedMap := expandLoop(ex3, loop)
+	// expandedMap := expandLoop(ex3, loop)
 
-	printPipeMap(expandedMap)
+	// printPipeMap(expandedMap)
 	fmt.Println("--------")
 
 	return 0
@@ -338,24 +339,35 @@ func printPipeMap(pipeMap [][]rune) {
 		fmt.Print("    ")
 		for j := 0; j < len(pipeMap[0]); j++ {
 			index := fmt.Sprintf("%3d", j)
-			fmt.Printf("%c", index[i])
+			fmt.Printf("%c ", index[i])
+			// fmt.Printf("%c", index[i])
 		}
 		fmt.Print("\n")
 	}
 
 	fmt.Print("    ")
 	for j := 0; j < len(pipeMap[0]); j++ {
-		fmt.Printf("%c", '━')
+		fmt.Printf("%c%c", '━', '━')
+		// fmt.Printf("%c", '━' )
 	}
 	fmt.Print("\n")
 
 	for y, line := range pipeMap {
 		fmt.Printf("%3d%c", y, '┃')
 		for _, val := range line {
-			fmt.Printf("%c", val)
+			fmt.Printf("%c ", val)
+			// fmt.Printf("%c", val)
 		}
-		fmt.Print("\n")
+		fmt.Printf("%c\n", '┃')
+		// fmt.Print("\n")
 	}
+
+	fmt.Print("    ")
+	for j := 0; j < len(pipeMap[0]); j++ {
+		fmt.Printf("%c%c", '━', '━')
+		// fmt.Printf("%c", '━' )
+	}
+	fmt.Print("\n")
 }
 
 func printPipeLoop(loop []coords, pipeMap [][]rune) {
@@ -363,14 +375,16 @@ func printPipeLoop(loop []coords, pipeMap [][]rune) {
 		fmt.Print("    ")
 		for j := 0; j < len(pipeMap[0]); j++ {
 			index := fmt.Sprintf("%3d", j)
-			fmt.Printf("%c", index[i])
+			fmt.Printf("%c ", index[i])
+			// fmt.Printf("%c", index[i])
 		}
 		fmt.Print("\n")
 	}
 
 	fmt.Print("    ")
 	for j := 0; j < len(pipeMap[0]); j++ {
-		fmt.Printf("%c", '━')
+		fmt.Printf("%c%c", '━', '━')
+		// fmt.Printf("%c", '━' )
 	}
 	fmt.Print("\n")
 
@@ -378,11 +392,21 @@ func printPipeLoop(loop []coords, pipeMap [][]rune) {
 		fmt.Printf("%3d%c", y, '┃')
 		for x, val := range line {
 			if slices.Contains(loop, coords{x: x, y: y}) {
-				fmt.Printf("%c", val)
+				fmt.Printf("%c ", val)
+				// fmt.Printf("%c", val)
 			} else {
-				fmt.Printf("%c", '▐')
+				fmt.Printf("%c ", ' ')
+				// fmt.Printf("%c", '▐')
 			}
 		}
-		fmt.Print("\n")
+		fmt.Printf("%c\n", '┃')
+		// fmt.Print("\n")
 	}
+
+	fmt.Print("    ")
+	for j := 0; j < len(pipeMap[0]); j++ {
+		fmt.Printf("%c%c", '━', '━')
+		// fmt.Printf("%c", '━' )
+	}
+	fmt.Print("\n")
 }
