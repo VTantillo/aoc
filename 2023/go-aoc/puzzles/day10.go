@@ -98,7 +98,6 @@ func (m *navMap) init() {
 }
 
 func (m *navMap) walk(d direction) {
-	m.curr.print()
 	if m.canWalk(d) {
 		switch d {
 		case north:
@@ -127,13 +126,9 @@ func (m *navMap) walk(d direction) {
 	} else {
 		fmt.Println("Couldn't walk", d.string())
 	}
-
-	fmt.Print("Walked ", d.string(), " to ")
-	m.curr.print()
 }
 
 func (m *navMap) followPipe() {
-	fmt.Println("Following pipe")
 	pipeDirections := m.curr.pipe.validDirections()
 	remDirections := slices.DeleteFunc(pipeDirections, func(d direction) bool {
 		return m.prevDirection == d
@@ -203,6 +198,71 @@ func (m *navMap) canWalk(d direction) bool {
 	}
 }
 
+func (m *navMap) findLoop(d direction) []coords {
+	var visited []coords
+
+	visited = append(visited, m.curr.coords)
+
+	m.walk(d)
+	visited = append(visited, m.curr.coords)
+
+	for {
+		m.followPipe()
+		if !checkFoundLoop(visited, m.curr.coords) {
+			visited = append(visited, m.curr.coords)
+			continue
+		}
+		break
+	}
+	return visited
+}
+
+func checkFoundLoop(visited []coords, next coords) bool {
+	return slices.Contains(visited, next)
+}
+
+func expandLoop(pipeMap [][]rune, loop []coords) [][]rune {
+	var expandedMap [][]rune
+
+	newCols := len(pipeMap[0]) + (len(pipeMap[0]) - 1)
+	for y, row := range pipeMap {
+		newRow := make([]rune, 0)
+		for x, col := range row {
+			if slices.Contains(loop, coords{x: x, y: y}) {
+				newRow = append(newRow, col)
+			} else {
+				newRow = append(newRow, '.')
+			}
+
+			if x != newCols-1 {
+				newRow = append(newRow, ' ')
+			}
+		}
+		expandedMap = append(expandedMap, newRow)
+
+		if y != len(pipeMap)-1 {
+			emptyRow := make([]rune, 0)
+
+			for i := 0; i < newCols; i++ {
+				emptyRow = append(emptyRow, ' ')
+			}
+			expandedMap = append(expandedMap, emptyRow)
+		}
+	}
+
+	return expandedMap
+}
+
+func parseDay10(input []string) [][]rune {
+	var pipeMap [][]rune
+
+	for _, l := range input {
+		asRunes := []rune(l)
+		pipeMap = append(pipeMap, asRunes)
+	}
+	return pipeMap
+}
+
 func Day10Pt1(input []string) int {
 	pipeMap := parseDay10(input)
 	printPipeMap(pipeMap)
@@ -233,45 +293,43 @@ func Day10Pt1(input []string) int {
 	return steps
 }
 
-func (m *navMap) findLoop(d direction) []coords {
-	var visited []coords
+func Day10Pt2(input []string) int {
+	// pipeMap := parseDay10(input)
 
-	fmt.Println("Trying to go", d.string())
-	fmt.Print("Starting at: ")
-	m.curr.print()
+	ex3 := [][]rune{
+		{'.', '.', '.', '.', '.', '.', '.', '.', '.', '.'},
+		{'.', 'S', '-', '-', '-', '-', '-', '-', '7', '.'},
+		{'.', '|', 'F', '-', '-', '-', '-', '7', '|', '.'},
+		{'.', '|', '|', '.', '.', '.', '.', '|', '|', '.'},
+		{'.', '|', '|', '.', '.', '.', '.', '|', '|', '.'},
+		{'.', '|', 'L', '-', '7', 'F', '-', 'J', '|', '.'},
+		{'.', '|', '.', '.', '|', '|', '.', '.', '|', '.'},
+		{'.', 'L', '-', '-', 'J', 'L', '-', '-', 'J', '.'},
+		{'.', '.', '.', '.', '.', '.', '.', '.', '.', '.'},
+	}
 
-	visited = append(visited, m.curr.coords)
+	printPipeMap(ex3)
 
-	m.walk(d)
-	visited = append(visited, m.curr.coords)
+	myMap := navMap{cellMap: makeCellMap(ex3)}
+	myMap.init()
 
-	for {
-		m.followPipe()
-		if !checkFoundLoop(visited, m.curr.coords) {
-			visited = append(visited, m.curr.coords)
-			continue
+	var startingDirections []direction
+	for _, d := range myMap.curr.pipe.validDirections() {
+		if myMap.canWalk(d) {
+			startingDirections = append(startingDirections, d)
 		}
-		break
 	}
-	return visited
-}
 
-func checkFoundLoop(visited []coords, next coords) bool {
-	return slices.Contains(visited, next)
-}
+	loop := myMap.findLoop(startingDirections[0])
 
-func parseDay10(input []string) [][]rune {
-	var pipeMap [][]rune
+	printPipeLoop(loop, ex3)
 
-	for _, l := range input {
-		asRunes := []rune(l)
-		pipeMap = append(pipeMap, asRunes)
-	}
-	return pipeMap
-}
+	expandedMap := expandLoop(ex3, loop)
 
-func findStartingCell(cellMap [][]cell) *cell {
-	return nil
+	printPipeMap(expandedMap)
+	fmt.Println("--------")
+
+	return 0
 }
 
 func printPipeMap(pipeMap [][]rune) {
@@ -280,21 +338,50 @@ func printPipeMap(pipeMap [][]rune) {
 		fmt.Print("    ")
 		for j := 0; j < len(pipeMap[0]); j++ {
 			index := fmt.Sprintf("%3d", j)
-			fmt.Printf("%c ", index[i])
+			fmt.Printf("%c", index[i])
 		}
 		fmt.Print("\n")
 	}
 
 	fmt.Print("    ")
 	for j := 0; j < len(pipeMap[0]); j++ {
-		fmt.Printf("%c%c", '━', '━')
+		fmt.Printf("%c", '━')
 	}
 	fmt.Print("\n")
 
 	for y, line := range pipeMap {
 		fmt.Printf("%3d%c", y, '┃')
 		for _, val := range line {
-			fmt.Printf("%c ", val)
+			fmt.Printf("%c", val)
+		}
+		fmt.Print("\n")
+	}
+}
+
+func printPipeLoop(loop []coords, pipeMap [][]rune) {
+	for i := 0; i < 3; i++ {
+		fmt.Print("    ")
+		for j := 0; j < len(pipeMap[0]); j++ {
+			index := fmt.Sprintf("%3d", j)
+			fmt.Printf("%c", index[i])
+		}
+		fmt.Print("\n")
+	}
+
+	fmt.Print("    ")
+	for j := 0; j < len(pipeMap[0]); j++ {
+		fmt.Printf("%c", '━')
+	}
+	fmt.Print("\n")
+
+	for y, line := range pipeMap {
+		fmt.Printf("%3d%c", y, '┃')
+		for x, val := range line {
+			if slices.Contains(loop, coords{x: x, y: y}) {
+				fmt.Printf("%c", val)
+			} else {
+				fmt.Printf("%c", '▐')
+			}
 		}
 		fmt.Print("\n")
 	}
