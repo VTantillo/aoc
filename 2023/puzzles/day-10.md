@@ -218,9 +218,9 @@ L--J.L7...LJS7F-7L7.
 ....L7.F7||L7|.L7L7|
 .....|FJLJ|FJ|F7|.LJ
 ....FJL-7.||.||||...
+....L---J.LJ.LJLJ...
 ```
 
-....L---J.LJ.LJLJ...
 The above sketch has many random bits of ground, some of which are in the
 loop (I) and some of which are outside it (O):
 
