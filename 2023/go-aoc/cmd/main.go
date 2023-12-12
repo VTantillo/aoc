@@ -7,9 +7,9 @@ import (
 )
 
 func main() {
-	input := utils.ReadInput("../inputs/day10.txt")
+	input := utils.ReadInput("../inputs/day11.txt")
 
-	result := puzzles.Day10Pt2(input)
+	result := puzzles.Day11Pt2(input, 1000000)
 
 	fmt.Println("result was: ", result)
 }
