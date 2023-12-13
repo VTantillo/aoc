@@ -2,14 +2,23 @@ package main
 
 import (
 	"aoc/puzzles"
-	"aoc/utils"
 	"fmt"
+	"strings"
 )
 
 func main() {
-	input := utils.ReadInput("../inputs/day11.txt")
+	springsEx2 := `???.### 1,1,3
+  .??..??...?##. 1,1,3
+  ?#?#?#?#?#?#?#? 1,3,1,6
+  ????.#...#... 4,1,1
+  ????.######..#####. 1,6,5
+  ?###???????? 3,2,1`
 
-	result := puzzles.Day11Pt2(input, 1000000)
+	input := strings.Split(springsEx2, "\n")
+
+	// input := utils.ReadInput("../inputs/day11.txt")
+
+	result := puzzles.Day12Pt1(input)
 
 	fmt.Println("result was: ", result)
 }
