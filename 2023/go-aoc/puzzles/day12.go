@@ -14,11 +14,33 @@ type conditionRecord struct {
 	damagedGroups []int
 }
 
+func findArrangements(record conditionRecord) int {
+	total := len(record.springs)
+	return total
+}
+
+func parseConditionRecord(line string) conditionRecord {
+	splitLine := strings.Split(line, " ")
+	springs := []rune(splitLine[0])
+
+	var groups []int
+	for _, g := range strings.Split(splitLine[1], ",") {
+		var group int
+		fmt.Sscanf(string(g), "%d", &group)
+		groups = append(groups, group)
+	}
+
+	return conditionRecord{
+		springs:       springs,
+		damagedGroups: groups,
+	}
+}
+
 func parseDay12(input []string) []conditionRecord {
 	var records []conditionRecord
 	for _, line := range input {
-		splitLine := strings.Split(line, " ")
-		fmt.Print(splitLine)
+		r := parseConditionRecord(line)
+		records = append(records, r)
 	}
 
 	return records
