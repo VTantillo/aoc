@@ -35,20 +35,24 @@ const (
 	east
 	south
 	west
+	northEast
+	northWest
+	southEast
+	southWest
 )
 
 func (d direction) string() string {
-	return [...]string{"Unspecified", "North", "East", "South", "West"}[d]
+	return [...]string{"Unspecified", "North", "East", "South", "West", "North East", "North West", "South East", "South West"}[d]
 }
 
-type side int
+type Side int
 
 const (
-	left side = iota + 1
-	right
+	Left Side = iota + 1
+	Right
 )
 
-func (s side) string() string {
+func (s Side) string() string {
 	return [...]string{"Left", "Right"}[s]
 }
 
@@ -77,55 +81,115 @@ func (s symbol) validDirections() []direction {
 	}
 }
 
-func (s symbol) sideDirections(side side, to direction) direction {
+func (s symbol) sideDirections(side Side, to direction) []direction {
 	switch s {
 	case '|':
 		switch to {
 		case north:
 			switch side {
-			case left:
-				return west
-			case right:
-				return east
+			case Left:
+				return []direction{west}
+			case Right:
+				return []direction{east}
 			}
 		case south:
 			switch side {
-			case left:
-				return east
-			case right:
-				return west
+			case Left:
+				return []direction{east}
+			case Right:
+				return []direction{west}
 			}
 		}
 	case '-':
 		switch to {
 		case east:
 			switch side {
-			case left:
-				return north
-			case right:
-				return south
+			case Left:
+				return []direction{north}
+			case Right:
+				return []direction{south}
 			}
 		case west:
 			switch side {
-			case left:
-				return south
-			case right:
-				return north
+			case Left:
+				return []direction{south}
+			case Right:
+				return []direction{north}
 			}
 		}
 	case 'L':
-		return unspecified
+		switch to {
+		case north:
+			switch side {
+			case Left:
+				return []direction{west, south}
+			case Right:
+				return []direction{northEast}
+			}
+		case east:
+			switch side {
+			case Left:
+				return []direction{northEast}
+			case Right:
+				return []direction{west, south}
+			}
+		}
 	case 'J':
-		return unspecified
+		switch to {
+		case north:
+			switch side {
+			case Left:
+				return []direction{northWest}
+			case Right:
+				return []direction{east, south}
+			}
+		case west:
+			switch side {
+			case Left:
+				return []direction{east, south}
+			case Right:
+				return []direction{northWest}
+			}
+		}
 	case '7':
-		return unspecified
+		switch to {
+		case south:
+			switch side {
+			case Left:
+				return []direction{north, east}
+			case Right:
+				return []direction{southWest}
+			}
+		case west:
+			switch side {
+			case Left:
+				return []direction{southWest}
+			case Right:
+				return []direction{north, east}
+			}
+		}
 	case 'F':
-		return unspecified
+		switch to {
+		case south:
+			switch side {
+			case Left:
+				return []direction{southEast}
+			case Right:
+				return []direction{west, north}
+			}
+		case east:
+			switch side {
+			case Left:
+				return []direction{west, north}
+			case Right:
+				return []direction{southEast}
+			}
+		}
 	default:
-		return unspecified
+		return []direction{unspecified}
 	}
 
-	return unspecified
+	return []direction{unspecified}
 }
 
 type coords struct {
@@ -262,8 +326,7 @@ func (m *navMap) walk(d direction, showMap bool) {
 	if showMap {
 		fmt.Print("\033c")
 		m.printMap()
-		time.Sleep(250 * time.Millisecond)
-
+		time.Sleep(100 * time.Millisecond)
 	}
 }
 
@@ -300,6 +363,34 @@ func (m *navMap) getSouthCell() *cell {
 func (m *navMap) getWestCell() *cell {
 	if m.curr.x-1 >= 0 {
 		return m.cellMap[m.curr.y][m.curr.x-1]
+	}
+	return nil
+}
+
+func (m *navMap) getNorthWestCell() *cell {
+	if m.curr.x-1 >= 0 && m.curr.y-1 >= 0 {
+		return m.cellMap[m.curr.y-1][m.curr.x-1]
+	}
+	return nil
+}
+
+func (m *navMap) getNorthEastCell() *cell {
+	if m.curr.x+1 < m.cellMap.width() && m.curr.y-1 >= 0 {
+		return m.cellMap[m.curr.y-1][m.curr.x+1]
+	}
+	return nil
+}
+
+func (m *navMap) getSouthWestCell() *cell {
+	if m.curr.x-1 >= 0 && m.curr.y+1 < m.cellMap.height() {
+		return m.cellMap[m.curr.y+1][m.curr.x-1]
+	}
+	return nil
+}
+
+func (m *navMap) getSouthEastCell() *cell {
+	if m.curr.x+1 < m.cellMap.width() && m.curr.y+1 < m.cellMap.height() {
+		return m.cellMap[m.curr.y+1][m.curr.x+1]
 	}
 	return nil
 }
@@ -370,12 +461,12 @@ func (m *navMap) clearLoop(loop []coords) {
 	}
 }
 
-func (m *navMap) findInner(loop []coords, side side, d direction) {
-	fmt.Println("Finding inner loop")
+func (m *navMap) findInner(loop []coords, side Side, d direction, showMap bool) {
 	start := m.curr.coords
 
-	m.walk(d, true)
+	m.walk(d, showMap)
 
+	steps := 0
 	for start.x != m.curr.x || start.y != m.curr.y {
 		pipeDirections := m.curr.pipe.validDirections()
 		remDirections := slices.DeleteFunc(pipeDirections, func(d direction) bool {
@@ -383,33 +474,131 @@ func (m *navMap) findInner(loop []coords, side side, d direction) {
 		})
 		checkDir := m.curr.pipe.sideDirections(side, remDirections[0])
 
-		fmt.Println(checkDir.string())
+		for _, dir := range checkDir {
+			switch dir {
+			case north:
+				cell := m.getNorthCell()
+				if cell != nil && cell.pipe == '.' {
+					cell.pipe = 'I'
+				}
+			case south:
+				cell := m.getSouthCell()
+				if cell != nil && cell.pipe == '.' {
+					cell.pipe = 'I'
+				}
+			case east:
+				cell := m.getEastCell()
+				if cell != nil && cell.pipe == '.' {
+					cell.pipe = 'I'
+				}
+			case west:
+				cell := m.getWestCell()
+				if cell != nil && cell.pipe == '.' {
+					cell.pipe = 'I'
+				}
+			case northEast:
+				cell := m.getNorthEastCell()
+				if cell != nil && cell.pipe == '.' {
+					cell.pipe = 'I'
+				}
+			case northWest:
+				cell := m.getNorthWestCell()
+				if cell != nil && cell.pipe == '.' {
+					cell.pipe = 'I'
+				}
+			case southEast:
+				cell := m.getSouthEastCell()
+				if cell != nil && cell.pipe == '.' {
+					cell.pipe = 'I'
+				}
+			case southWest:
+				cell := m.getSouthWestCell()
+				if cell != nil && cell.pipe == '.' {
+					cell.pipe = 'I'
+				}
+			}
+		}
+		steps++
 
-		switch checkDir {
+		m.followPipe(showMap)
+	}
+
+	m.printMap()
+	m.fillInside()
+	m.printMap()
+}
+
+func (m *navMap) countInside() int {
+	count := 0
+	for _, line := range m.cellMap {
+		for _, cell := range line {
+			if cell.pipe == symbol('I') {
+				count++
+			}
+		}
+	}
+	return count
+}
+
+func (m *navMap) fillInside() {
+	for _, line := range m.cellMap {
+		for _, cell := range line {
+			m.curr = cell
+			if m.curr.pipe == symbol('.') && m.checkSurroundingInside() {
+				m.curr.pipe = symbol('I')
+			}
+		}
+	}
+}
+
+func (m *navMap) checkSurroundingInside() bool {
+	count := 0
+	for _, dir := range []direction{north, south, east, west, northEast, northWest, southEast, southWest} {
+		switch dir {
 		case north:
 			cell := m.getNorthCell()
-			if cell != nil && cell.pipe == '.' {
-				cell.pipe = 'I'
+			if cell != nil && cell.pipe == 'I' {
+				count++
 			}
 		case south:
 			cell := m.getSouthCell()
-			if cell != nil && cell.pipe == '.' {
-				cell.pipe = 'I'
+			if cell != nil && cell.pipe == 'I' {
+				count++
 			}
 		case east:
 			cell := m.getEastCell()
-			if cell != nil && cell.pipe == '.' {
-				cell.pipe = 'I'
+			if cell != nil && cell.pipe == 'I' {
+				count++
 			}
 		case west:
 			cell := m.getWestCell()
-			if cell != nil && cell.pipe == '.' {
-				cell.pipe = 'I'
+			if cell != nil && cell.pipe == 'I' {
+				count++
+			}
+		case northEast:
+			cell := m.getNorthEastCell()
+			if cell != nil && cell.pipe == 'I' {
+				count++
+			}
+		case northWest:
+			cell := m.getNorthWestCell()
+			if cell != nil && cell.pipe == 'I' {
+				count++
+			}
+		case southEast:
+			cell := m.getSouthEastCell()
+			if cell != nil && cell.pipe == 'I' {
+				count++
+			}
+		case southWest:
+			cell := m.getSouthWestCell()
+			if cell != nil && cell.pipe == 'I' {
+				count++
 			}
 		}
-
-		m.followPipe(true)
 	}
+
+	return count > 1
 }
 
 func Day10Pt1(input []string) int {
@@ -442,7 +631,7 @@ func Day10Pt1(input []string) int {
 	return steps
 }
 
-func Day10Pt2(input []string) int {
+func Day10Pt2(input []string, s Side, showMap bool) int {
 	pipeMap := parseDay10(input)
 
 	myMap := navMap{cellMap: makeCellMap(pipeMap)}
@@ -458,9 +647,9 @@ func Day10Pt2(input []string) int {
 	loop := myMap.findLoop(startingDirections[0])
 	myMap.clearLoop(loop)
 
-	myMap.findInner(loop, left, startingDirections[0])
+	myMap.findInner(loop, s, startingDirections[0], showMap)
 
-	return 0
+	return myMap.countInside()
 }
 
 func parseDay10(input []string) [][]rune {
@@ -472,10 +661,6 @@ func parseDay10(input []string) [][]rune {
 	}
 	return pipeMap
 }
-
-// loopMap := navMap{cellMap: makeLoopMap(pipeMap, loop)}
-// loopMap.printMap()
-// printPipeLoop(loop, pipeMap)
 
 func swapSymbol(s rune) rune {
 	switch s {
