@@ -172,7 +172,7 @@ type System struct {
 	Queue       PulseQueue
 }
 
-func (s *System) PushButton() {
+func (s *System) PushButton(showPulses bool) {
 	s.ButtonCount++
 
 	button := s.Modules["button"]
@@ -181,7 +181,7 @@ func (s *System) PushButton() {
 	s.PushPulses(buttonPulses)
 
 	for !s.Queue.IsEmpty() {
-		next := s.ProcessPulse()
+		next := s.ProcessPulse(showPulses)
 		nextModule := s.Modules[next.Dst]
 
 		var pulses []*Pulse
@@ -204,50 +204,50 @@ func (s *System) PushPulses(pulses []*Pulse) {
 	}
 }
 
-func (s *System) ProcessPulse() *Pulse {
+func (s *System) ProcessPulse(showPulse bool) *Pulse {
 	p := s.Queue.Pop()
-	// p.PrintPulse()
-	// if p.Dst == "rx" && p.Strength != PulseStrengthHigh {
-	// 	fmt.Println(s.ButtonCount)
-	// 	p.PrintPulse()
-	// }
+
+	if showPulse {
+		p.PrintPulse()
+	}
+
 	return p
 }
 
-func Part1(input []string, buttonPresses int) int {
+func (s *System) ResetPulseCounts() {
+	s.HiPulses = 0
+	s.LowPulses = 0
+}
+
+func (s *System) PrintSystemState() {
+	fmt.Printf("Presses: %4d, Hi: %3d, Low: %3d, Total: %4d\n", s.ButtonCount, s.HiPulses, s.LowPulses, s.HiPulses+s.LowPulses)
+}
+
+func Part1(input []string, buttonPresses int, showPulses bool) int {
 	s := parseInput(input)
 
 	for i := 0; i < buttonPresses; i++ {
-		s.PushButton()
+		s.PushButton(showPulses)
 	}
 
 	return s.HiPulses * s.LowPulses
 }
 
-func Part2(input []string) int {
+func Part2(input []string, showPulses bool) int {
 	s := parseInput(input)
-	signalReceived := false
 
-	outputModule := s.Modules["rx"].(*OutputModule)
-	fmt.Println(outputModule.prevPulse.String())
-	for !signalReceived {
-		s.PushButton()
-		fmt.Println("Count", s.ButtonCount)
-
-		if outputModule.prevPulse != PulseStrengthHigh {
-			fmt.Print("\033c")
-			fmt.Println("Prev pulse", outputModule.prevPulse.String())
-		}
-
-		if outputModule.prevPulse == PulseStrengthLow {
-			signalReceived = true
-		}
-	}
-
-	// for i := 1000; i > 0; i-- {
-	// 	s.PushButton()
-	// 	fmt.Println("Button Count", s.ButtonCount)
+	// outputModule := s.Modules["rx"].(*OutputModule)
+	// for outputModule.prevPulse != PulseStrengthLow {
+	// 	s.PushButton(showPulses)
+	// 	s.PrintSystemState()
+	// 	s.ResetPulseCounts()
 	// }
+
+	for i := 1000; i > 0; i-- {
+		s.PushButton(showPulses)
+		s.PrintSystemState()
+		s.ResetPulseCounts()
+	}
 
 	return s.ButtonCount
 }

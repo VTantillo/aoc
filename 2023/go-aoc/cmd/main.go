@@ -8,7 +8,7 @@ import (
 
 func main() {
 	input := utils.ReadInput("../inputs/day20.txt")
-	result := day20.Part2(input)
+	result := day20.Part2(input, false)
 
 	fmt.Println("result was: ", result)
 }
