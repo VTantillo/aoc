@@ -1,5 +1,10 @@
 package day20
 
+import (
+	"fmt"
+	"strings"
+)
+
 type State int
 
 const (
@@ -7,36 +12,349 @@ const (
 	StateOn
 )
 
+func (s State) String() string {
+	return [...]string{"off", "on"}[s]
+}
+
 type PulseStrength int
 
 const (
-	PulseUnspecified PulseStrength = iota
-	PulseLow
-	PulseHigh
+	PulseStrengthLow PulseStrength = iota
+	PulseStrengthHigh
+	PulseStrengthUndefined
 )
 
-type PulseProcessor interface {
-	ProcesPulse(p Pulse) *Pulse
+func (ps PulseStrength) String() string {
+	return [...]string{"low", "high", "undefined"}[ps]
 }
 
 type Pulse struct {
+	Src      string
+	Dst      string
 	Strength PulseStrength
 }
 
-type FlipFlopModule struct { // prefix %
+func (p Pulse) PrintPulse() {
+	fmt.Printf("%s -%s-> %s\n", p.Src, p.Strength.String(), p.Dst)
+}
+
+type Pulser interface {
+	Pulse(p *Pulse) []*Pulse
+}
+
+type PulseProvider struct{}
+
+type Module struct {
+	Label  string
+	Inputs []string
+	Output []string
+}
+
+func (m Module) sendPulses(s PulseStrength) []*Pulse {
+	pulses := make([]*Pulse, 0)
+
+	for _, o := range m.Output {
+		pulses = append(pulses, &Pulse{
+			Src:      m.Label,
+			Dst:      o,
+			Strength: s,
+		})
+	}
+
+	return pulses
+}
+
+type ButtonModule struct {
+	Module
+}
+
+func (b *ButtonModule) Pulse(p *Pulse) []*Pulse {
+	return b.sendPulses(PulseStrengthLow)
+}
+
+type BroadcasterModule struct {
+	Module
+}
+
+func (b *BroadcasterModule) Pulse(p *Pulse) []*Pulse {
+	return b.sendPulses(p.Strength)
+}
+
+type FlipFlopModule struct {
+	Module
 	State State
 }
 
-type ConjunctionModule struct { // prefix &
+func (f *FlipFlopModule) Pulse(p *Pulse) []*Pulse {
+	if p.Strength == PulseStrengthHigh {
+		return make([]*Pulse, 0)
+	}
+
+	var pulseToSend PulseStrength
+
+	switch f.State {
+	case StateOff:
+		f.State = StateOn
+		pulseToSend = PulseStrengthHigh
+	case StateOn:
+		f.State = StateOff
+		pulseToSend = PulseStrengthLow
+	}
+
+	return f.sendPulses(pulseToSend)
 }
 
-type ButtonModule struct{}
+type ConjunctionModule struct {
+	Module
+	prevPulses map[string]PulseStrength
+}
 
-type BrodcastModule struct{}
+func (c *ConjunctionModule) Pulse(p *Pulse) []*Pulse {
+	pulseToSend := PulseStrengthLow
+
+	c.prevPulses[p.Src] = p.Strength
+
+	for _, v := range c.prevPulses {
+		if v == PulseStrengthLow {
+			pulseToSend = PulseStrengthHigh
+			break
+		}
+	}
+
+	return c.sendPulses(pulseToSend)
+}
+
+type OutputModule struct {
+	Module
+	prevPulse PulseStrength
+}
+
+func (o *OutputModule) Pulse(p *Pulse) []*Pulse {
+	o.prevPulse = p.Strength
+	return make([]*Pulse, 0)
+}
+
+type PulseQueue struct {
+	pulses []*Pulse
+}
+
+func (pq *PulseQueue) Push(p *Pulse) int {
+	pq.pulses = append(pq.pulses, p)
+
+	return len(pq.pulses)
+}
+
+func (pq *PulseQueue) Pop() *Pulse {
+	if pq.IsEmpty() {
+		return nil
+	}
+
+	var pulse *Pulse
+
+	pulse, pq.pulses = pq.pulses[0], pq.pulses[1:]
+
+	return pulse
+}
+
+func (pq *PulseQueue) IsEmpty() bool {
+	return pq.Size() == 0
+}
+
+func (pq *PulseQueue) Size() int {
+	return len(pq.pulses)
+}
 
 type System struct {
-	PulseCount int
+	ButtonCount int
+	HiPulses    int
+	LowPulses   int
+	Modules     map[string]Pulser
+	Queue       PulseQueue
 }
 
-func Part1() {
+func (s *System) PushButton() {
+	s.ButtonCount++
+
+	button := s.Modules["button"]
+
+	buttonPulses := button.Pulse(nil)
+	s.PushPulses(buttonPulses)
+
+	for !s.Queue.IsEmpty() {
+		next := s.ProcessPulse()
+		nextModule := s.Modules[next.Dst]
+
+		var pulses []*Pulse
+		if nextModule != nil {
+			pulses = s.Modules[next.Dst].Pulse(next)
+		}
+		s.PushPulses(pulses)
+	}
+}
+
+func (s *System) PushPulses(pulses []*Pulse) {
+	for _, p := range pulses {
+		switch p.Strength {
+		case PulseStrengthLow:
+			s.LowPulses++
+		case PulseStrengthHigh:
+			s.HiPulses++
+		}
+		s.Queue.Push(p)
+	}
+}
+
+func (s *System) ProcessPulse() *Pulse {
+	p := s.Queue.Pop()
+	// p.PrintPulse()
+	// if p.Dst == "rx" && p.Strength != PulseStrengthHigh {
+	// 	fmt.Println(s.ButtonCount)
+	// 	p.PrintPulse()
+	// }
+	return p
+}
+
+func Part1(input []string, buttonPresses int) int {
+	s := parseInput(input)
+
+	for i := 0; i < buttonPresses; i++ {
+		s.PushButton()
+	}
+
+	return s.HiPulses * s.LowPulses
+}
+
+func Part2(input []string) int {
+	s := parseInput(input)
+	signalReceived := false
+
+	outputModule := s.Modules["rx"].(*OutputModule)
+	fmt.Println(outputModule.prevPulse.String())
+	for !signalReceived {
+		s.PushButton()
+		fmt.Println("Count", s.ButtonCount)
+
+		if outputModule.prevPulse != PulseStrengthHigh {
+			fmt.Print("\033c")
+			fmt.Println("Prev pulse", outputModule.prevPulse.String())
+		}
+
+		if outputModule.prevPulse == PulseStrengthLow {
+			signalReceived = true
+		}
+	}
+
+	// for i := 1000; i > 0; i-- {
+	// 	s.PushButton()
+	// 	fmt.Println("Button Count", s.ButtonCount)
+	// }
+
+	return s.ButtonCount
+}
+
+func parseInput(input []string) System {
+	s := System{
+		Modules: make(map[string]Pulser),
+	}
+
+	button := &ButtonModule{
+		Module: Module{
+			Label:  "button",
+			Output: []string{"broadcaster"},
+		},
+	}
+
+	s.Modules["button"] = button
+
+	inputsMap := make(map[string][]string)
+	for _, line := range input {
+		split := strings.Split(line, "->")
+		label := split[0]
+
+		var inputLabel string
+		switch rune(label[0]) {
+		case '%':
+			inputLabel = strings.Trim(label[1:], " ")
+		case '&':
+			inputLabel = strings.Trim(label[1:], " ")
+		case 'b':
+			inputLabel = strings.Trim(label, " ")
+		}
+
+		outputLabels := strings.Split(split[1], ", ")
+		for _, l := range outputLabels {
+			label := strings.Trim(l, " ")
+			inputsMap[label] = append(inputsMap[label], inputLabel)
+		}
+	}
+
+	for _, line := range input {
+		split := strings.Split(line, "->")
+		label := split[0]
+
+		var inputLabel string
+		switch rune(label[0]) {
+		case '%':
+			inputLabel = strings.Trim(label[1:], " ")
+		case '&':
+			inputLabel = strings.Trim(label[1:], " ")
+		case 'b':
+			inputLabel = strings.Trim(label, " ")
+		}
+
+		outputLabels := strings.Split(split[1], ", ")
+		var outputs []string
+		for _, l := range outputLabels {
+			label := strings.Trim(l, " ")
+			outputs = append(outputs, label)
+		}
+
+		switch rune(label[0]) {
+		case '%':
+			f := FlipFlopModule{
+				Module: Module{
+					Label:  inputLabel,
+					Inputs: inputsMap[inputLabel],
+					Output: outputs,
+				},
+				State: StateOff,
+			}
+			s.Modules[f.Label] = &f
+		case '&':
+			pulsesMap := make(map[string]PulseStrength)
+			for _, i := range inputsMap[inputLabel] {
+				pulsesMap[i] = PulseStrengthLow
+			}
+			c := ConjunctionModule{
+				Module: Module{
+					Label:  inputLabel,
+					Inputs: inputsMap[inputLabel],
+					Output: outputs,
+				},
+				prevPulses: pulsesMap,
+			}
+			s.Modules[c.Label] = &c
+		case 'b':
+			b := BroadcasterModule{
+				Module: Module{
+					Label:  inputLabel,
+					Inputs: []string{"button"},
+					Output: outputs,
+				},
+			}
+			s.Modules[b.Label] = &b
+		}
+	}
+
+	o := OutputModule{
+		Module: Module{
+			Label:  "rx",
+			Inputs: []string{"zp"},
+			Output: make([]string, 0),
+		},
+		prevPulse: PulseStrengthUndefined,
+	}
+	s.Modules["rx"] = &o
+
+	return s
 }

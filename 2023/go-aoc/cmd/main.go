@@ -1,17 +1,14 @@
 package main
 
 import (
-	"aoc/puzzles"
+	"aoc/puzzles/day20"
 	"aoc/utils"
 	"fmt"
 )
 
 func main() {
-	input := utils.ReadInput("../inputs/day10.txt")
-	result := puzzles.Day10Pt2(input, puzzles.Right, false)
-
-	// input := strings.Split(puzzles.Pt2Ex1, "\n")
-	// result := puzzles.Day10Pt2(input, puzzles.Left, true)
+	input := utils.ReadInput("../inputs/day20.txt")
+	result := day20.Part2(input)
 
 	fmt.Println("result was: ", result)
 }
