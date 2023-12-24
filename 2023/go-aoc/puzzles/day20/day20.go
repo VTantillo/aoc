@@ -42,8 +42,6 @@ type Pulser interface {
 	Pulse(p *Pulse) []*Pulse
 }
 
-type PulseProvider struct{}
-
 type Module struct {
 	Label  string
 	Inputs []string
@@ -236,16 +234,9 @@ func Part1(input []string, buttonPresses int, showPulses bool) int {
 func Part2(input []string, showPulses bool) int {
 	s := parseInput(input)
 
-	// outputModule := s.Modules["rx"].(*OutputModule)
-	// for outputModule.prevPulse != PulseStrengthLow {
-	// 	s.PushButton(showPulses)
-	// 	s.PrintSystemState()
-	// 	s.ResetPulseCounts()
-	// }
-
-	for i := 1000; i > 0; i-- {
+	outputModule := s.Modules["rx"].(*OutputModule)
+	for outputModule.prevPulse != PulseStrengthLow {
 		s.PushButton(showPulses)
-		s.PrintSystemState()
 		s.ResetPulseCounts()
 	}
 

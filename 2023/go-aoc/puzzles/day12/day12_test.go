@@ -1,4 +1,4 @@
-package puzzles
+package day12
 
 import (
 	"slices"
@@ -16,7 +16,7 @@ var springsEx string = `???.### 1,1,3
 func TestDay12Pt1(t *testing.T) {
 	lines := strings.Split(springsEx, "\n")
 
-	result := Day12Pt1(lines)
+	result := Part1(lines)
 
 	if result != 21 {
 		t.Fatalf("Result should be 21, got=%v", result)
@@ -65,37 +65,37 @@ func TestParseConditionRecord(t *testing.T) {
 
 func TestFindArrangements(t *testing.T) {
 	// ???.### 1,1,3 - 1 arrangement
-	record1 := conditionRecord{
+	record1 := ConditionRecord{
 		springs:       []rune{'?', '?', '?', '.', '#', '#', '#'},
 		damagedGroups: []int{1, 1, 3},
 	}
 
 	// .??..??...?##. 1,1,3 - 4 arrangements
-	record2 := conditionRecord{
+	record2 := ConditionRecord{
 		springs:       []rune{'.', '?', '?', '.', '.', '?', '?', '.', '.', '.', '?', '#', '#', '.'},
 		damagedGroups: []int{1, 1, 3},
 	}
 
 	// ?#?#?#?#?#?#?#? 1,3,1,6 - 1 arrangement
-	record3 := conditionRecord{
+	record3 := ConditionRecord{
 		springs:       []rune{'?', '#', '?', '#', '?', '#', '?', '#', '?', '#', '?', '#', '?', '#', '?'},
 		damagedGroups: []int{1, 3, 1, 6},
 	}
 
 	// ????.#...#... 4,1,1 - 1 arrangement
-	record4 := conditionRecord{
+	record4 := ConditionRecord{
 		springs:       []rune{'?', '?', '?', '?', '.', '#', '.', '.', '.', '#', '.', '.', '.'},
 		damagedGroups: []int{4, 1, 1},
 	}
 
 	// ????.######..#####. 1,6,5 - 4 arrangements
-	record5 := conditionRecord{
+	record5 := ConditionRecord{
 		springs:       []rune{'?', '?', '?', '?', '.', '#', '#', '#', '#', '#', '#', '.', '.', '#', '#', '#', '#', '#', '.'},
 		damagedGroups: []int{1, 6, 5},
 	}
 
 	// ?###???????? 3,2,1 - 10 arrangements
-	record6 := conditionRecord{
+	record6 := ConditionRecord{
 		springs:       []rune{'?', '#', '#', '#', '?', '?', '?', '?', '?', '?', '?', '?'},
 		damagedGroups: []int{3, 2, 1},
 	}
