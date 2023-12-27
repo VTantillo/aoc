@@ -10,8 +10,8 @@ import (
 // '?' == unknown
 
 type ConditionRecord struct {
-	springs       []rune
-	damagedGroups []int
+	Springs       []rune
+	DamagedGroups []int
 }
 
 func isRecordValid(springs []rune, groups []int) bool {
@@ -23,30 +23,66 @@ func isRecordValid(springs []rune, groups []int) bool {
 		for i := start; i < len(springs); i++ {
 			if !inGroup && springs[i] == '#' {
 				inGroup = true
-				start = i
 			}
 
 			if inGroup && springs[i] == '#' {
 				remaining--
 			}
 
-			if remaining == 0 {
-				break
-			}
-
 			if inGroup && springs[i] != '#' {
 				inGroup = false
+				start = i
+				break
 			}
 		}
 
+		if remaining != 0 {
+			return false
+		}
 	}
 
 	return isValid
 }
 
-func findArrangements(record ConditionRecord) int {
-	total := len(record.springs)
-	return total
+func (cr ConditionRecord) FindArrangements() int {
+	var unknowns []int
+
+	for x, r := range cr.Springs {
+		if r == '?' {
+			unknowns = append(unknowns, x)
+		}
+	}
+
+	var combos [][]rune
+	start := cr.Springs[:unknowns[0]]
+	combos = append(combos, start)
+
+	for _, s := range cr.Springs {
+		if s != '?' {
+			for _, c := range combos {
+				c = append(c, s)
+			}
+			continue
+		}
+
+		for _, c := range combos {
+			c = append(c, '.')
+		}
+
+		for _, c := range combos {
+			newC := make([]rune, len(c))
+			copy(newC, c)
+			newC = append(newC, '#')
+			combos = append(combos, newC)
+		}
+
+	}
+
+	for _, c := range combos {
+		fmt.Println(c)
+	}
+
+	return len(combos)
 }
 
 func parseConditionRecord(line string) ConditionRecord {
@@ -61,8 +97,8 @@ func parseConditionRecord(line string) ConditionRecord {
 	}
 
 	return ConditionRecord{
-		springs:       springs,
-		damagedGroups: groups,
+		Springs:       springs,
+		DamagedGroups: groups,
 	}
 }
 

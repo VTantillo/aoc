@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strings"
 )
 
 func ReadInput(path string) []string {
@@ -24,6 +25,12 @@ func ReadInput(path string) []string {
 	file.Close()
 
 	return fileLines
+}
+
+func ReadString(input string) []string {
+	inputLines := make([]string, 0)
+	inputLines = append(inputLines, strings.Split(input, "\n")...)
+	return inputLines
 }
 
 func PrintRuneMap(pipeMap [][]rune) {
