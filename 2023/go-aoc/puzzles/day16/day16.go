@@ -3,6 +3,7 @@ package day16
 import (
 	"aoc/utils/term"
 	"fmt"
+	"slices"
 	"time"
 )
 
@@ -91,6 +92,32 @@ func (t Tile) IsEnergized() bool {
 type Grid struct {
 	Tiles [][]*Tile
 	Beams []*Beam
+}
+
+func (g *Grid) SimulateConfig() int {
+	prevEnergized := 0
+	turnCount := 0
+	waitTurns := 1
+
+	for start := time.Now(); time.Since(start) < time.Second*30; {
+		g.UpdateBeams()
+
+		if prevEnergized == g.CountEnergizedTiles() {
+			if turnCount < waitTurns {
+				turnCount++
+			} else {
+				break
+			}
+		} else {
+			prevEnergized = g.CountEnergizedTiles()
+			turnCount = 0
+		}
+	}
+
+	// fmt.Println("final:")
+	// g.PrintGrid()
+
+	return g.CountEnergizedTiles()
 }
 
 func (g *Grid) UpdateBeams() {
@@ -249,9 +276,6 @@ func (g *Grid) PrintGrid() {
 		fmt.Printf("%c", '━')
 	}
 	fmt.Print("┛\n")
-
-	time.Sleep(200 * time.Millisecond)
-	fmt.Print(term.ClearScreen)
 }
 
 func parseInput(input []string) [][]*Tile {
@@ -270,48 +294,208 @@ func parseInput(input []string) [][]*Tile {
 	return tiles
 }
 
-func newGrid(tiles [][]*Tile) Grid {
+type BeamConfig struct {
+	Coords
+	Direction Direction
+}
+
+type ConfigResult struct {
+	Id int
+	BeamConfig
+	NumTiles int
+	Duration time.Duration
+}
+
+func (cr ConfigResult) PrintResult() {
+	fmt.Printf("%d [%d, %d] %s %d %d\n", cr.Id, cr.Row, cr.Col, cr.Direction.String(), cr.Duration.Milliseconds(), cr.NumTiles)
+}
+
+type SimulationResults struct {
+	results []ConfigResult
+	Min     int
+	Max     int
+}
+
+func (sr SimulationResults) PrintSummary() {
+	fmt.Printf("Count: %d, Min: %d, Max: %d\n", len(sr.results), sr.Min, sr.Max)
+}
+
+func (s *SimulationResults) Add(r ConfigResult) {
+	s.results = append(s.results, r)
+
+	slices.SortFunc(s.results, func(a, b ConfigResult) int {
+		return a.NumTiles - b.NumTiles
+	})
+	if r.NumTiles < s.Min {
+		s.Min = r.NumTiles
+	}
+
+	if r.NumTiles > s.Max {
+		s.Max = r.NumTiles
+	}
+}
+
+func newGrid(input []string, config BeamConfig) Grid {
 	beams := make([]*Beam, 0)
 	beams = append(beams, &Beam{
-		Dir: DirRight,
+		Coords: config.Coords,
+		Dir:    config.Direction,
 	})
 
 	g := Grid{
-		Tiles: tiles,
+		Tiles: parseInput(input),
 		Beams: beams,
 	}
 
-	g.Tiles[0][0].Beams = beams
+	g.Tiles[config.Row][config.Col].Beams = beams
 
 	return g
 }
 
 func Day16(input []string) int {
 	tiles := parseInput(input)
-	g := newGrid(tiles)
+	maxTiles := 0
 
-	fmt.Println("initial:")
-	g.PrintGrid()
+	results := SimulationResults{}
 
-	prevEnergized := 0
-	turnCount := 0
-	waitTurns := 1
+	// Top Edge
+	for i := 0; i < len(tiles[0]); i++ {
 
-	for {
-		g.UpdateBeams()
-		g.PrintGrid()
-
-		if prevEnergized == g.CountEnergizedTiles() {
-			if turnCount < waitTurns {
-				turnCount++
-			} else {
-				break
-			}
-		} else {
-			prevEnergized = g.CountEnergizedTiles()
-			turnCount = 0
+		config := BeamConfig{
+			Coords{Row: 0, Col: i},
+			DirDown,
 		}
+		g := newGrid(input, config)
+
+		start := time.Now()
+		numTiles := g.SimulateConfig()
+		end := time.Now()
+
+		result := ConfigResult{
+			i + 1,
+			config,
+			numTiles,
+			start.Sub(end),
+		}
+		results.Add(result)
+
+		if numTiles > maxTiles {
+			maxTiles = numTiles
+			g.PrintGrid()
+			fmt.Println("New max")
+		}
+		result.PrintResult()
 	}
 
-	return g.CountEnergizedTiles()
+	fmt.Print("Done with top edge, summary:")
+	results.PrintSummary()
+
+	// Bottom edge
+	for i := 0; i < len(tiles[0]); i++ {
+		config := BeamConfig{
+			Coords{Row: len(tiles) - 1, Col: i},
+			DirUp,
+		}
+		g := newGrid(input, config)
+
+		start := time.Now()
+		numTiles := g.SimulateConfig()
+		end := time.Now()
+
+		result := ConfigResult{
+			i + 1,
+			config,
+			numTiles,
+			start.Sub(end),
+		}
+		results.Add(result)
+
+		if numTiles > maxTiles {
+			maxTiles = numTiles
+			g.PrintGrid()
+			fmt.Println("New max")
+		}
+		result.PrintResult()
+	}
+
+	fmt.Println("Done with bottom edge, current max is:", maxTiles)
+
+	// Left edge
+	for i := 0; i < len(tiles); i++ {
+		config := BeamConfig{
+			Coords{Row: i, Col: 0},
+			DirRight,
+		}
+		g := newGrid(input, config)
+
+		start := time.Now()
+		numTiles := g.SimulateConfig()
+		end := time.Now()
+
+		result := ConfigResult{
+			i + 1,
+			config,
+			numTiles,
+			start.Sub(end),
+		}
+		results.Add(result)
+
+		if numTiles > maxTiles {
+			maxTiles = numTiles
+			g.PrintGrid()
+			fmt.Println("New max")
+		}
+		result.PrintResult()
+	}
+
+	fmt.Println("Done with left edge, current max is:", maxTiles)
+
+	// Right Edge
+	for i := 0; i < len(tiles); i++ {
+		config := BeamConfig{
+			Coords{Row: i, Col: len(tiles[0]) - 1},
+			DirLeft,
+		}
+		g := newGrid(input, config)
+
+		start := time.Now()
+		numTiles := g.SimulateConfig()
+		end := time.Now()
+
+		result := ConfigResult{
+			i + 1,
+			config,
+			numTiles,
+			start.Sub(end),
+		}
+		results.Add(result)
+
+		if numTiles > maxTiles {
+			maxTiles = numTiles
+			g.PrintGrid()
+			fmt.Println("New max")
+		}
+		result.PrintResult()
+	}
+
+	return maxTiles
+}
+
+func RunSingle(input []string, config BeamConfig) ConfigResult {
+	g := newGrid(input, config)
+
+	g.PrintGrid()
+
+	start := time.Now()
+	numTiles := g.SimulateConfig()
+	end := time.Now()
+
+	result := ConfigResult{
+		1,
+		config,
+		numTiles,
+		start.Sub(end),
+	}
+
+	return result
 }
