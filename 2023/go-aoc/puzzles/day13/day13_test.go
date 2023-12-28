@@ -21,9 +21,6 @@ var exInput = `#.##..##.
 ..##..###
 #....#..#`
 
-func TestPart1(t *testing.T) {
-}
-
 func TestParseInput(t *testing.T) {
 	// input := utils.ReadInput("../../../inputs/day13.txt")
 	input := utils.ReadString(exInput)
