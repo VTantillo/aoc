@@ -54,7 +54,6 @@ type Step struct {
 type Beam struct {
 	Coords
 	Dir     Direction
-	Path    map[string]bool
 	IsStuck bool
 }
 
@@ -74,12 +73,6 @@ func (b *Beam) MoveBeam(d Direction) {
 	case DirLeft:
 		b.Col -= 1
 	}
-
-	if b.Path[b.PathKey()] {
-		b.IsStuck = true
-	} else {
-		b.Path[b.PathKey()] = true
-	}
 }
 
 type Tile struct {
@@ -89,8 +82,9 @@ type Tile struct {
 }
 
 type Grid struct {
-	Tiles [][]*Tile
-	Beams []*Beam
+	Tiles    [][]*Tile
+	Beams    []*Beam
+	BeamPath map[string]bool
 }
 
 func (g *Grid) SimulateConfig() int {
@@ -133,13 +127,13 @@ func (g *Grid) UpdateBeams() {
 			}
 		case '-':
 			if b.Dir == DirUp || b.Dir == DirDown {
-				g.SplitBeam(b, b.Dir)
+				g.SplitBeam(b, b.Dir, '-')
 			} else {
 				g.MoveBeam(b, b.Dir)
 			}
 		case '|':
 			if b.Dir == DirLeft || b.Dir == DirRight {
-				g.SplitBeam(b, b.Dir)
+				g.SplitBeam(b, b.Dir, '|')
 			} else {
 				g.MoveBeam(b, b.Dir)
 			}
@@ -149,18 +143,6 @@ func (g *Grid) UpdateBeams() {
 }
 
 func (g *Grid) MoveBeam(b *Beam, d Direction) {
-}
-
-func (g *Grid) SplitBeam(b *Beam, d Direction) {
-}
-
-func (g *Grid) PruneBeams() {
-	g.Beams = slices.DeleteFunc(g.Beams, func(b *Beam) bool {
-		return b.IsStuck
-	})
-}
-
-func (g *Grid) CheckDir(b Coords, d Direction) bool {
 	valid := false
 	switch d {
 	case DirUp:
@@ -173,7 +155,115 @@ func (g *Grid) CheckDir(b Coords, d Direction) bool {
 		valid = b.Col-1 >= 0
 	}
 
-	return valid
+	if valid {
+		b.MoveBeam(d)
+		g.Tiles[b.Row][b.Col].IsEnergized = true
+	} else {
+		b.IsStuck = true
+	}
+
+	if g.BeamPath[b.PathKey()] {
+		b.IsStuck = true
+	} else {
+		g.BeamPath[b.PathKey()] = true
+	}
+}
+
+func (g *Grid) SplitBeam(b *Beam, d Direction, s rune) {
+	switch s {
+	case '-':
+		rightValid := b.Col+1 < g.Width()
+		leftValid := b.Col-1 >= 0
+		if rightValid && leftValid {
+			newBeam := Beam{
+				Coords:  b.Coords,
+				Dir:     DirRight,
+				IsStuck: false,
+			}
+			newBeam.MoveBeam(DirRight)
+			b.MoveBeam(DirLeft)
+
+			if g.BeamPath[newBeam.PathKey()] {
+				b.IsStuck = true
+			} else {
+				g.BeamPath[newBeam.PathKey()] = true
+				g.Beams = append(g.Beams, &newBeam)
+				g.Tiles[newBeam.Row][newBeam.Col].IsEnergized = true
+			}
+
+			if g.BeamPath[b.PathKey()] {
+				b.IsStuck = true
+			} else {
+				g.BeamPath[b.PathKey()] = true
+				g.Tiles[b.Row][b.Col].IsEnergized = true
+			}
+
+		} else if rightValid || leftValid {
+			if rightValid {
+				b.MoveBeam(DirRight)
+			} else {
+				b.MoveBeam(DirLeft)
+			}
+
+			if g.BeamPath[b.PathKey()] {
+				b.IsStuck = true
+			} else {
+				g.BeamPath[b.PathKey()] = true
+				g.Tiles[b.Row][b.Col].IsEnergized = true
+			}
+		} else {
+			b.IsStuck = true
+		}
+	case '|':
+		upValid := b.Row-1 >= 0
+		downValid := b.Row+1 < g.Height()
+		if upValid && downValid {
+			newBeam := Beam{
+				Coords:  b.Coords,
+				Dir:     DirUp,
+				IsStuck: false,
+			}
+			newBeam.MoveBeam(DirUp)
+			b.MoveBeam(DirDown)
+
+			if g.BeamPath[newBeam.PathKey()] {
+				b.IsStuck = true
+			} else {
+				g.BeamPath[newBeam.PathKey()] = true
+				g.Beams = append(g.Beams, &newBeam)
+				g.Tiles[newBeam.Row][newBeam.Col].IsEnergized = true
+			}
+
+			if g.BeamPath[b.PathKey()] {
+				b.IsStuck = true
+			} else {
+				g.BeamPath[b.PathKey()] = true
+				g.Tiles[b.Row][b.Col].IsEnergized = true
+			}
+
+		} else if upValid || downValid {
+			if upValid {
+				b.MoveBeam(DirUp)
+			} else {
+				b.MoveBeam(DirDown)
+			}
+
+			if g.BeamPath[b.PathKey()] {
+				b.IsStuck = true
+			} else {
+				g.BeamPath[b.PathKey()] = true
+				g.Tiles[b.Row][b.Col].IsEnergized = true
+			}
+		} else {
+			b.IsStuck = true
+		}
+	}
+}
+
+func (g *Grid) PruneBeams() {
+	g.Beams = slices.DeleteFunc(g.Beams, func(b *Beam) bool {
+		return b.IsStuck
+	})
 }
 
 func (g *Grid) CountEnergizedTiles() int {
@@ -261,7 +351,7 @@ type ConfigResult struct {
 }
 
 func (cr ConfigResult) PrintResult() {
-	fmt.Printf("%d [%d, %d] %s %d %d\n", cr.Id, cr.Row, cr.Col, cr.Direction.String(), cr.Duration.Milliseconds(), cr.NumTiles)
+	fmt.Printf("%d [%d, %d] %s %s %d\n", cr.Id, cr.Row, cr.Col, cr.Direction.String(), cr.Duration, cr.NumTiles)
 }
 
 type SimulationResults struct {
@@ -294,12 +384,12 @@ func newGrid(input []string, config BeamConfig) Grid {
 	beams = append(beams, &Beam{
 		Coords: config.Coords,
 		Dir:    config.Direction,
-		Path:   make(map[string]bool),
 	})
 
 	g := Grid{
-		Tiles: parseInput(input),
-		Beams: beams,
+		Tiles:    parseInput(input),
+		Beams:    beams,
+		BeamPath: make(map[string]bool),
 	}
 
 	g.Tiles[config.Row][config.Col].IsEnergized = true

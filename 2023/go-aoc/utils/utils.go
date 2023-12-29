@@ -69,3 +69,7 @@ func PrintRuneMap(pipeMap [][]rune) {
 	}
 	fmt.Print("\n")
 }
+
+func GetPtr[T any](t T) *T {
+	return &t
+}
