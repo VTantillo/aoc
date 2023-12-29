@@ -1,36 +1,33 @@
 package main
 
 import (
-	"aoc/puzzles/day16"
+	"aoc/puzzles/day17"
 	"aoc/utils"
-	"fmt"
-	"time"
 )
 
-var exLayout = `.|...\....
-|.-.\.....
-.....|-...
-........|.
-..........
-.........\
-..../.\\..
-.-.-/..|..
-.|....-|.\
-..//.|....`
+var exMap = `2413432311323
+3215453535623
+3255245654254
+3446585845452
+4546657867536
+1438598798454
+4457876987766
+3637877979653
+4654967986887
+4564679986453
+1224686865563
+2546548887735
+4322674655533`
+
+var testInput = utils.ReadString(exMap)
 
 func main() {
-	input := utils.ReadInput("../inputs/day16.txt")
-	// input := utils.ReadString(exLayout)
+	// input := utils.ReadInput("../inputs/day17.txt")
+	// day17.Day17(input)
 
-	start := time.Now()
-	result := day16.Day16(input)
-	end := time.Now()
+	// start := time.Now()
+	// result := day17.Day17(input)
+	// end := time.Now()
 
-	// result := day16.RunSingle(input, day16.BeamConfig{
-	// 	Coords:    day16.Coords{Row: 0, Col: 75},
-	// 	Direction: day16.DirDown,
-	// })
-
-	fmt.Println("result was:", result)
-	fmt.Println("Found result in", end.Sub(start))
+	day17.Day17(testInput)
 }

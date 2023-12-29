@@ -91,6 +91,7 @@ func (g *Grid) SimulateConfig() int {
 	for len(g.Beams) > 0 {
 		g.UpdateBeams()
 		g.PruneBeams()
+		g.PrintGrid()
 	}
 
 	return g.CountEnergizedTiles()
@@ -288,6 +289,7 @@ func (g *Grid) Height() int {
 }
 
 func (g *Grid) PrintGrid() {
+	fmt.Println(term.ClearScreen)
 	for i := 0; i < 3; i++ {
 		fmt.Print("    ")
 		for j := 0; j < len(g.Tiles[0]); j++ {
@@ -320,6 +322,8 @@ func (g *Grid) PrintGrid() {
 		fmt.Printf("%c", '━')
 	}
 	fmt.Print("┛\n")
+
+	time.Sleep(500 * time.Millisecond)
 }
 
 func parseInput(input []string) [][]*Tile {
@@ -426,10 +430,10 @@ func Day16(input []string) int {
 
 		if numTiles > maxTiles {
 			maxTiles = numTiles
-			g.PrintGrid()
+			// g.PrintGrid()
 			fmt.Println("New max")
 		}
-		result.PrintResult()
+		// result.PrintResult()
 	}
 
 	fmt.Print("Done with top edge, summary:")
