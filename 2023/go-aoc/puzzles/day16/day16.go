@@ -4,27 +4,9 @@ import (
 	"aoc/utils/term"
 	"fmt"
 	"slices"
+	"strconv"
 	"time"
 )
-
-// .|...\....
-// |.-.\.....
-// .....|-...
-// ........|.
-// ..........
-// .........\
-// ..../.\\..
-// .-.-/..|..
-// .|....-|.\
-// ..//.|....`
-//
-// Beam enters top left corner, from the left heading to the right
-// - Beam hits empty space, it continues in same direction
-// - Beam hits a mirror, beam is reflected 90 degrees
-// - Beam hits pointy end of splitter, acts as if it was empty space
-// - Beam hits flat side of splitter the beam splits into two beams
-//
-// Tile is energized if that tile has at least one beam passing through it
 
 type Direction int
 
@@ -60,9 +42,24 @@ type Coords struct {
 	Col int
 }
 
+func (c Coords) String() string {
+	return strconv.Itoa(c.Row) + "," + strconv.Itoa(c.Col)
+}
+
+type Step struct {
+	Coords
+	Direction
+}
+
 type Beam struct {
 	Coords
-	Dir Direction
+	Dir     Direction
+	Path    map[string]bool
+	IsStuck bool
+}
+
+func (b *Beam) PathKey() string {
+	return b.String() + "-" + b.Dir.String()
 }
 
 func (b *Beam) MoveBeam(d Direction) {
@@ -77,16 +74,18 @@ func (b *Beam) MoveBeam(d Direction) {
 	case DirLeft:
 		b.Col -= 1
 	}
+
+	if b.Path[b.PathKey()] {
+		b.IsStuck = true
+	} else {
+		b.Path[b.PathKey()] = true
+	}
 }
 
 type Tile struct {
 	Coords
-	Tile  rune
-	Beams []*Beam
-}
-
-func (t Tile) IsEnergized() bool {
-	return len(t.Beams) > 0
+	Tile        rune
+	IsEnergized bool
 }
 
 type Grid struct {
@@ -95,27 +94,10 @@ type Grid struct {
 }
 
 func (g *Grid) SimulateConfig() int {
-	prevEnergized := 0
-	turnCount := 0
-	waitTurns := 1
-
-	for start := time.Now(); time.Since(start) < time.Second*30; {
+	for len(g.Beams) > 0 {
 		g.UpdateBeams()
-
-		if prevEnergized == g.CountEnergizedTiles() {
-			if turnCount < waitTurns {
-				turnCount++
-			} else {
-				break
-			}
-		} else {
-			prevEnergized = g.CountEnergizedTiles()
-			turnCount = 0
-		}
+		g.PruneBeams()
 	}
-
-	// fmt.Println("final:")
-	// g.PrintGrid()
 
 	return g.CountEnergizedTiles()
 }
@@ -126,107 +108,79 @@ func (g *Grid) UpdateBeams() {
 		bTile := g.Tiles[b.Row][b.Col]
 		switch bTile.Tile {
 		case '.':
-			if g.CheckDir(b.Coords, b.Dir) {
-				b.MoveBeam(b.Dir)
-				g.Tiles[b.Row][b.Col].Beams = append(g.Tiles[b.Row][b.Col].Beams, b)
-			}
+			g.MoveBeam(b, b.Dir)
 		case '/':
-			if b.Dir == DirUp && g.CheckDir(b.Coords, DirRight) {
-				b.MoveBeam(DirRight)
-				g.Tiles[b.Row][b.Col].Beams = append(g.Tiles[b.Row][b.Col].Beams, b)
-			} else if b.Dir == DirRight && g.CheckDir(b.Coords, DirUp) {
-				b.MoveBeam(DirUp)
-				g.Tiles[b.Row][b.Col].Beams = append(g.Tiles[b.Row][b.Col].Beams, b)
-			} else if b.Dir == DirDown && g.CheckDir(b.Coords, DirLeft) {
-				b.MoveBeam(DirLeft)
-				g.Tiles[b.Row][b.Col].Beams = append(g.Tiles[b.Row][b.Col].Beams, b)
-			} else if b.Dir == DirLeft && g.CheckDir(b.Coords, DirDown) {
-				b.MoveBeam(DirDown)
-				g.Tiles[b.Row][b.Col].Beams = append(g.Tiles[b.Row][b.Col].Beams, b)
+			switch b.Dir {
+			case DirUp:
+				g.MoveBeam(b, DirRight)
+			case DirRight:
+				g.MoveBeam(b, DirUp)
+			case DirDown:
+				g.MoveBeam(b, DirLeft)
+			case DirLeft:
+				g.MoveBeam(b, DirDown)
 			}
-
 		case '\\':
-			if b.Dir == DirUp && g.CheckDir(b.Coords, DirLeft) {
-				b.MoveBeam(DirLeft)
-				g.Tiles[b.Row][b.Col].Beams = append(g.Tiles[b.Row][b.Col].Beams, b)
-			} else if b.Dir == DirRight && g.CheckDir(b.Coords, DirDown) {
-				b.MoveBeam(DirDown)
-				g.Tiles[b.Row][b.Col].Beams = append(g.Tiles[b.Row][b.Col].Beams, b)
-			} else if b.Dir == DirDown && g.CheckDir(b.Coords, DirRight) {
-				b.MoveBeam(DirRight)
-				g.Tiles[b.Row][b.Col].Beams = append(g.Tiles[b.Row][b.Col].Beams, b)
-			} else if b.Dir == DirLeft && g.CheckDir(b.Coords, DirUp) {
-				b.MoveBeam(DirUp)
-				g.Tiles[b.Row][b.Col].Beams = append(g.Tiles[b.Row][b.Col].Beams, b)
+			switch b.Dir {
+			case DirUp:
+				g.MoveBeam(b, DirLeft)
+			case DirRight:
+				g.MoveBeam(b, DirDown)
+			case DirDown:
+				g.MoveBeam(b, DirRight)
+			case DirLeft:
+				g.MoveBeam(b, DirUp)
 			}
 		case '-':
 			if b.Dir == DirUp || b.Dir == DirDown {
-				if g.CheckDir(b.Coords, DirLeft) {
-					newBeam := Beam{
-						Coords: b.Coords,
-					}
-					newBeam.MoveBeam(DirLeft)
-					newBeams = append(newBeams, &newBeam)
-					g.Tiles[newBeam.Row][newBeam.Col].Beams = append(g.Tiles[newBeam.Row][newBeam.Col].Beams, b)
-				}
-
-				if g.CheckDir(b.Coords, DirRight) {
-					b.MoveBeam(DirRight)
-					g.Tiles[b.Row][b.Col].Beams = append(g.Tiles[b.Row][b.Col].Beams, b)
-				}
+				g.SplitBeam(b, b.Dir)
 			} else {
-				if g.CheckDir(b.Coords, b.Dir) {
-					b.MoveBeam(b.Dir)
-					g.Tiles[b.Row][b.Col].Beams = append(g.Tiles[b.Row][b.Col].Beams, b)
-				}
+				g.MoveBeam(b, b.Dir)
 			}
 		case '|':
 			if b.Dir == DirLeft || b.Dir == DirRight {
-				if g.CheckDir(b.Coords, DirUp) {
-					newBeam := Beam{
-						Coords: b.Coords,
-					}
-					newBeam.MoveBeam(DirUp)
-					newBeams = append(newBeams, &newBeam)
-					g.Tiles[newBeam.Row][newBeam.Col].Beams = append(g.Tiles[newBeam.Row][newBeam.Col].Beams, b)
-				}
-
-				if g.CheckDir(b.Coords, DirDown) {
-					b.MoveBeam(DirDown)
-					g.Tiles[b.Row][b.Col].Beams = append(g.Tiles[b.Row][b.Col].Beams, b)
-				}
+				g.SplitBeam(b, b.Dir)
 			} else {
-				if g.CheckDir(b.Coords, b.Dir) {
-					b.MoveBeam(b.Dir)
-					g.Tiles[b.Row][b.Col].Beams = append(g.Tiles[b.Row][b.Col].Beams, b)
-				}
+				g.MoveBeam(b, b.Dir)
 			}
-
 		}
 	}
 	g.Beams = append(g.Beams, newBeams...)
 }
 
-func (g *Grid) CheckDir(c Coords, d Direction) bool {
+func (g *Grid) MoveBeam(b *Beam, d Direction) {
+}
+
+func (g *Grid) SplitBeam(b *Beam, d Direction) {
+}
+
+func (g *Grid) PruneBeams() {
+	g.Beams = slices.DeleteFunc(g.Beams, func(b *Beam) bool {
+		return b.IsStuck
+	})
+}
+
+func (g *Grid) CheckDir(b Coords, d Direction) bool {
+	valid := false
 	switch d {
 	case DirUp:
-		return c.Row-1 >= 0
+		valid = b.Row-1 >= 0
 	case DirRight:
-		return c.Col+1 < g.Width()
+		valid = b.Col+1 < g.Width()
 	case DirDown:
-		return c.Row+1 < g.Height()
+		valid = b.Row+1 < g.Height()
 	case DirLeft:
-		return c.Col-1 >= 0
+		valid = b.Col-1 >= 0
 	}
 
-	return false
+	return valid
 }
 
 func (g *Grid) CountEnergizedTiles() int {
 	count := 0
 	for _, row := range g.Tiles {
 		for _, t := range row {
-			if t.IsEnergized() {
+			if t.IsEnergized {
 				count++
 			}
 		}
@@ -262,7 +216,7 @@ func (g *Grid) PrintGrid() {
 	for y, line := range g.Tiles {
 		fmt.Printf("%3d%c", y, '┃')
 		for _, val := range line {
-			if val.IsEnergized() {
+			if val.IsEnergized {
 				fmt.Printf("%s%s%c%s", term.YellowBackground, term.Black, val.Tile, term.Reset)
 			} else {
 				fmt.Printf("%c", val.Tile)
@@ -340,6 +294,7 @@ func newGrid(input []string, config BeamConfig) Grid {
 	beams = append(beams, &Beam{
 		Coords: config.Coords,
 		Dir:    config.Direction,
+		Path:   make(map[string]bool),
 	})
 
 	g := Grid{
@@ -347,7 +302,7 @@ func newGrid(input []string, config BeamConfig) Grid {
 		Beams: beams,
 	}
 
-	g.Tiles[config.Row][config.Col].Beams = beams
+	g.Tiles[config.Row][config.Col].IsEnergized = true
 
 	return g
 }
