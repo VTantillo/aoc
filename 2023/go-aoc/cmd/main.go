@@ -3,6 +3,7 @@ package main
 import (
 	"aoc/puzzles/day17"
 	"aoc/utils"
+	"fmt"
 )
 
 var exMap = `2413432311323
@@ -23,11 +24,13 @@ var testInput = utils.ReadString(exMap)
 
 func main() {
 	// input := utils.ReadInput("../inputs/day17.txt")
-	// day17.Day17(input)
+	// result := day17.Day17(input, false)
+
+	result := day17.Day17(testInput, true)
 
 	// start := time.Now()
 	// result := day17.Day17(input)
 	// end := time.Now()
 
-	day17.Day17(testInput)
+	fmt.Println("Result is", result)
 }
