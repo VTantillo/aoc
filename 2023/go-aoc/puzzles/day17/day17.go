@@ -69,26 +69,22 @@ func (c coords) distance(dst coords) int {
 
 type node struct {
 	coords
-	weight        int
-	distance      int
-	cost          int
-	visited       bool
-	neighbors     map[direction]*node
-	prevDir       direction
-	prev          *node
-	straightCount int
-	index         int
+	weight    int
+	distance  int
+	cost      int
+	visited   bool
+	neighbors map[direction]*node
+	prevDir   direction
+	cantGo    []direction
+	prev      *node
 }
 
 func (n *node) calcCost(dst coords) {
 	normalDist := n.coords.distance(dst)
 	dist := normalDist + n.distance
-	// dist := n.distance
-	n.cost = dist + n.index
+	n.cost = dist
 
-	// if n.straightCount >= 3 {
-	// 	n.cost = n.cost * 100000000
-	// }
+	// n.cost = n.distance
 }
 
 type pathQueue []*node
@@ -98,23 +94,13 @@ func (p pathQueue) Len() int { return len(p) }
 func (p pathQueue) IsEmpty() bool { return len(p) == 0 }
 
 func (p *pathQueue) Push(n *node) {
+	*p = slices.DeleteFunc(*p, func(val *node) bool {
+		return val.key() == n.key()
+	})
 	*p = append(*p, n)
-	n.index = p.Len()
-
-	slices.SortFunc(*p, func(a, b *node) int {
+	slices.SortStableFunc(*p, func(a, b *node) int {
 		return a.cost - b.cost
 	})
-	slices.DeleteFunc(*p, func(a *node) bool {
-		return a.visited
-	})
-}
-
-func (p *pathQueue) Fix() {
-	if p.Len() > 1 {
-		slices.SortFunc(*p, func(a, b *node) int {
-			return a.cost - b.cost
-		})
-	}
 }
 
 func (p *pathQueue) Pop() *node {
@@ -134,15 +120,7 @@ type blockMap struct {
 }
 
 func (b *blockMap) findPathAStar(src, dst coords) {
-	nodes := make(map[string]*node)
-	for _, row := range b.blocks {
-		for _, n := range row {
-			nodes[n.key()] = n
-		}
-	}
-
-	srcNode := nodes[src.key()]
-	b.queue.Push(srcNode)
+	b.queue.Push(b.blocks[src.row][src.col])
 
 	for !b.queue.IsEmpty() {
 		b.curr = b.queue.Pop()
@@ -154,11 +132,11 @@ func (b *blockMap) findPathAStar(src, dst coords) {
 			break
 		}
 
-		if b.curr.visited {
-			continue
-		}
-
 		for d, n := range b.curr.neighbors {
+			if slices.Contains(b.curr.cantGo, d) {
+				continue
+			}
+
 			if !n.visited {
 				dist := b.curr.distance + n.weight
 
@@ -166,12 +144,14 @@ func (b *blockMap) findPathAStar(src, dst coords) {
 					n.distance = dist
 					n.prev = b.curr
 					n.prevDir = d.reverse()
-					if b.curr.prevDir == n.prevDir || b.curr.key() == src.key() {
-						n.straightCount = b.curr.straightCount + 1
-					}
-				}
-				if n.straightCount < 3 {
 					n.calcCost(dst)
+					noGo := []direction{d.reverse()}
+
+					if b.curr.prev != nil && (b.curr.prevDir == b.curr.prev.prevDir || b.curr.prev.prevDir == dirNone) {
+						noGo = append(noGo, d)
+					}
+
+					n.cantGo = noGo
 					b.queue.Push(n)
 				}
 			}
@@ -180,8 +160,8 @@ func (b *blockMap) findPathAStar(src, dst coords) {
 		b.printMap()
 	}
 
-	b.curr = nodes[dst.key()]
-	b.printMap()
+	// b.curr = b.blocks[dst.row][dst.col]
+	// b.printMap()
 }
 
 func (b *blockMap) printMap() {
@@ -220,7 +200,7 @@ func (b *blockMap) printMap() {
 			if b.curr.key() == val.key() {
 				fmt.Printf("%s%s%d%s", term.RedBackground, term.Black, val.weight, term.Reset)
 			} else if slices.Contains(pathKeys, val.key()) {
-				fmt.Printf("%s%s%d%s", term.BlueBackground, term.Black, val.weight, term.Reset)
+				fmt.Printf("%s%s%c%s", term.BlueBackground, term.Black, val.prevDir.reverse().printDirection(), term.Reset)
 			} else if val.visited {
 				fmt.Printf("%s%s%d%s", term.YellowBackground, term.Black, val.weight, term.Reset)
 			} else {
@@ -237,16 +217,16 @@ func (b *blockMap) printMap() {
 	fmt.Print("┛\n")
 
 	fmt.Print("Current node:\n")
-	fmt.Printf("\tkey: %s\n", b.curr.key())
-	fmt.Printf("\tdistance: %d\n", b.curr.distance)
-	fmt.Printf("\tcost: %d\n", b.curr.distance)
-	fmt.Printf("\tstraight count: %d\n", b.curr.straightCount)
-	fmt.Printf("\tprev direction: %s\n", b.curr.prevDir.String())
+	fmt.Printf("   key: %s\n", b.curr.key())
+	fmt.Printf("   distance: %d\n", b.curr.distance)
+	fmt.Printf("   cost: %d\n", b.curr.distance)
+	fmt.Printf("   prev direction: %s\n", b.curr.prevDir.String())
+	fmt.Printf("   can't go: %s\n", b.curr.cantGo)
 	fmt.Print("\n")
 	fmt.Printf("In Queue: %d\n", b.queue.Len())
 	for _, q := range b.queue {
 		fmt.Print("[\t")
-		fmt.Printf("key: %s, cost: %d, dist: %d, straight: %d, ", q.key(), q.cost, q.distance, q.straightCount)
+		fmt.Printf("key: %s, cost: %d, dist: %d, cant go: %s", q.key(), q.cost, q.distance, q.cantGo)
 		fmt.Print("\t]\n")
 	}
 
@@ -260,21 +240,19 @@ func Day17(input []string, showPath bool) int {
 		blockRow := make([]*node, 0)
 		for c, col := range row {
 			initDistance := 90000000
-			// straightCount := 0
 			if r == 0 && c == 0 {
 				initDistance = 0
-				// straightCount = 1
 			}
 			n := node{
 				coords: coords{
 					row: r,
 					col: c,
 				},
-				weight:        col,
-				distance:      initDistance,
-				visited:       false,
-				straightCount: 0,
-				neighbors:     make(map[direction]*node),
+				weight:    col,
+				distance:  initDistance,
+				visited:   false,
+				neighbors: make(map[direction]*node),
+				cantGo:    make([]direction, 0),
 			}
 			blockRow = append(blockRow, &n)
 		}
