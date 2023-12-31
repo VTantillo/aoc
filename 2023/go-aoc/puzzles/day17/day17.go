@@ -60,31 +60,24 @@ func (c coords) key() string {
 	return fmt.Sprintf("%d-%d", c.row, c.col)
 }
 
-func (c coords) distance(dst coords) int {
-	rowDist := math.Exp((float64(dst.row - c.col)))
-	colDist := math.Exp((float64(dst.row - c.col)))
+func distance(src, dst coords) int {
+	rowDist := math.Pow(float64(dst.row-src.row), 2)
+	colDist := math.Pow(float64(dst.col-src.col), 2)
 	dist := math.Sqrt(colDist + rowDist)
 	return int(dist)
 }
 
 type node struct {
 	coords
-	weight    int
-	distance  int
-	cost      int
-	visited   bool
-	neighbors map[direction]*node
-	prevDir   direction
-	cantGo    []direction
-	prev      *node
-}
-
-func (n *node) calcCost(dst coords) {
-	normalDist := n.coords.distance(dst)
-	dist := normalDist + n.distance
-	n.cost = dist
-
-	// n.cost = n.distance
+	weight     int
+	distance   int
+	cost       int
+	normalDist int
+	visited    bool
+	neighbors  map[direction]*node
+	prevDir    direction
+	cantGo     []direction
+	prev       *node
 }
 
 type pathQueue []*node
@@ -94,9 +87,9 @@ func (p pathQueue) Len() int { return len(p) }
 func (p pathQueue) IsEmpty() bool { return len(p) == 0 }
 
 func (p *pathQueue) Push(n *node) {
-	*p = slices.DeleteFunc(*p, func(val *node) bool {
-		return val.key() == n.key()
-	})
+	// *p = slices.DeleteFunc(*p, func(a *node) bool {
+	// 	return a.key() == n.key() || a.visited
+	// })
 	*p = append(*p, n)
 	slices.SortStableFunc(*p, func(a, b *node) int {
 		return a.cost - b.cost
@@ -114,9 +107,9 @@ func (p *pathQueue) Pop() *node {
 type blockMap struct {
 	blocks   [][]*node
 	curr     *node
+	queue    pathQueue
 	showPath bool
 	delay    time.Duration
-	queue    pathQueue
 }
 
 func (b *blockMap) findPathAStar(src, dst coords) {
@@ -132,6 +125,10 @@ func (b *blockMap) findPathAStar(src, dst coords) {
 			break
 		}
 
+		if b.curr.visited {
+			continue
+		}
+
 		for d, n := range b.curr.neighbors {
 			if slices.Contains(b.curr.cantGo, d) {
 				continue
@@ -144,14 +141,17 @@ func (b *blockMap) findPathAStar(src, dst coords) {
 					n.distance = dist
 					n.prev = b.curr
 					n.prevDir = d.reverse()
-					n.calcCost(dst)
-					noGo := []direction{d.reverse()}
+					n.cost = n.distance + n.normalDist
+					// n.cost = n.distance
 
-					if b.curr.prev != nil && (b.curr.prevDir == b.curr.prev.prevDir || b.curr.prev.prevDir == dirNone) {
+					noGo := []direction{n.prevDir}
+					if b.curr.prev != nil &&
+						((b.curr.prevDir == b.curr.prev.prevDir && b.curr.prevDir == d.reverse()) ||
+							b.curr.prev.prevDir == dirNone) {
 						noGo = append(noGo, d)
 					}
-
 					n.cantGo = noGo
+
 					b.queue.Push(n)
 				}
 			}
@@ -159,9 +159,6 @@ func (b *blockMap) findPathAStar(src, dst coords) {
 		b.curr.visited = true
 		b.printMap()
 	}
-
-	// b.curr = b.blocks[dst.row][dst.col]
-	// b.printMap()
 }
 
 func (b *blockMap) printMap() {
@@ -219,15 +216,19 @@ func (b *blockMap) printMap() {
 	fmt.Print("Current node:\n")
 	fmt.Printf("   key: %s\n", b.curr.key())
 	fmt.Printf("   distance: %d\n", b.curr.distance)
-	fmt.Printf("   cost: %d\n", b.curr.distance)
+	fmt.Printf("   normal dist: %d\n", b.curr.normalDist)
+	fmt.Printf("   cost: %d\n", b.curr.cost)
+	if b.curr.prev != nil {
+		fmt.Printf("   prev: %s\n", b.curr.prev.key())
+	}
 	fmt.Printf("   prev direction: %s\n", b.curr.prevDir.String())
 	fmt.Printf("   can't go: %s\n", b.curr.cantGo)
 	fmt.Print("\n")
-	fmt.Printf("In Queue: %d\n", b.queue.Len())
+	fmt.Printf("in queue: %d\n", b.queue.Len())
 	for _, q := range b.queue {
-		fmt.Print("[\t")
-		fmt.Printf("key: %s, cost: %d, dist: %d, cant go: %s", q.key(), q.cost, q.distance, q.cantGo)
-		fmt.Print("\t]\n")
+		fmt.Print("[   ")
+		fmt.Printf("key: %s, cost: %d, dist: %d, normDist: %d, cant go: %s", q.key(), q.cost, q.distance, q.normalDist, q.cantGo)
+		fmt.Print("   ]\n")
 	}
 
 	time.Sleep(b.delay * time.Millisecond)
@@ -236,6 +237,10 @@ func (b *blockMap) printMap() {
 func Day17(input []string, showPath bool) int {
 	blockWeights := parseMap(input)
 	blocks := make([][]*node, 0)
+	dst := coords{
+		row: len(blockWeights) - 1,
+		col: len(blockWeights[0]) - 1,
+	}
 	for r, row := range blockWeights {
 		blockRow := make([]*node, 0)
 		for c, col := range row {
@@ -243,16 +248,18 @@ func Day17(input []string, showPath bool) int {
 			if r == 0 && c == 0 {
 				initDistance = 0
 			}
+			src := coords{
+				row: r,
+				col: c,
+			}
 			n := node{
-				coords: coords{
-					row: r,
-					col: c,
-				},
-				weight:    col,
-				distance:  initDistance,
-				visited:   false,
-				neighbors: make(map[direction]*node),
-				cantGo:    make([]direction, 0),
+				coords:     src,
+				weight:     col,
+				distance:   initDistance,
+				normalDist: distance(src, dst),
+				visited:    false,
+				neighbors:  make(map[direction]*node),
+				cantGo:     make([]direction, 0),
 			}
 			blockRow = append(blockRow, &n)
 		}
@@ -285,11 +292,6 @@ func Day17(input []string, showPath bool) int {
 
 	b.showPath = showPath
 	b.delay = 200
-
-	dst := coords{
-		row: len(blockWeights) - 1,
-		col: len(blockWeights[0]) - 1,
-	}
 
 	b.findPathAStar(coords{0, 0}, dst)
 
