@@ -2,6 +2,7 @@ package day17
 
 import (
 	"aoc/utils/term"
+	"container/heap"
 	"fmt"
 	"math"
 	"slices"
@@ -78,55 +79,30 @@ type node struct {
 	prevDir    direction
 	cantGo     []direction
 	prev       *node
-}
-
-type pathQueue []*node
-
-func (p pathQueue) Len() int { return len(p) }
-
-func (p pathQueue) IsEmpty() bool { return len(p) == 0 }
-
-func (p *pathQueue) Push(n *node) {
-	// *p = slices.DeleteFunc(*p, func(a *node) bool {
-	// 	return a.key() == n.key() || a.visited
-	// })
-	*p = append(*p, n)
-	slices.SortStableFunc(*p, func(a, b *node) int {
-		return a.cost - b.cost
-	})
-}
-
-func (p *pathQueue) Pop() *node {
-	curr := *p
-	item := curr[0]
-	curr[0] = nil
-	*p = curr[1:]
-	return item
+	index      int
 }
 
 type blockMap struct {
 	blocks   [][]*node
 	curr     *node
-	queue    pathQueue
 	showPath bool
 	delay    time.Duration
 }
 
 func (b *blockMap) findPathAStar(src, dst coords) {
-	b.queue.Push(b.blocks[src.row][src.col])
+	q := make(NodeQueue, 0)
+	heap.Init(&q)
 
-	for !b.queue.IsEmpty() {
-		b.curr = b.queue.Pop()
+	heap.Push(&q, b.blocks[src.row][src.col])
+
+	for q.Len() > 0 {
+		b.curr = heap.Pop(&q).(*node)
 
 		if b.curr.key() == dst.key() {
 			b.curr.visited = true
 			b.printMap()
 			fmt.Println("Reached destination")
 			break
-		}
-
-		if b.curr.visited {
-			continue
 		}
 
 		for d, n := range b.curr.neighbors {
@@ -152,7 +128,7 @@ func (b *blockMap) findPathAStar(src, dst coords) {
 					}
 					n.cantGo = noGo
 
-					b.queue.Push(n)
+					heap.Push(&q, n)
 				}
 			}
 		}
@@ -224,12 +200,12 @@ func (b *blockMap) printMap() {
 	fmt.Printf("   prev direction: %s\n", b.curr.prevDir.String())
 	fmt.Printf("   can't go: %s\n", b.curr.cantGo)
 	fmt.Print("\n")
-	fmt.Printf("in queue: %d\n", b.queue.Len())
-	for _, q := range b.queue {
-		fmt.Print("[   ")
-		fmt.Printf("key: %s, cost: %d, dist: %d, normDist: %d, cant go: %s", q.key(), q.cost, q.distance, q.normalDist, q.cantGo)
-		fmt.Print("   ]\n")
-	}
+	// fmt.Printf("in queue: %d\n", b.queue.Len())
+	// for _, q := range b.queue {
+	// 	fmt.Print("[   ")
+	// 	fmt.Printf("key: %s, cost: %d, dist: %d, normDist: %d, cant go: %s", q.key(), q.cost, q.distance, q.normalDist, q.cantGo)
+	// 	fmt.Print("   ]\n")
+	// }
 
 	time.Sleep(b.delay * time.Millisecond)
 }
@@ -287,7 +263,7 @@ func Day17(input []string, showPath bool) int {
 		blocks:   blocks,
 		curr:     blocks[0][0],
 		showPath: false,
-		queue:    make(pathQueue, 0),
+		// queue:    make(pathQueue, 0),
 	}
 
 	b.showPath = showPath
