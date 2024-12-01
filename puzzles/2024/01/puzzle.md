@@ -1,4 +1,19 @@
-# 2024: Day 01
+# 2024: Day 01 `* *`
+
+## Notes
+
+Pt 1: 16:05
+Pt 2: 10:39
+Total: 26:44
+
+- First solve using python
+- Part 1 took me a little longer bc I had to look up zip, and how I had been
+  reading the files from last year.
+- Thing that I was reminded of is that since everything in python is an object,
+  it is pass by reference so it changes the actual objects in other functions
+  - For example, the `.sort()` from part 1 stuck around for part 2.
+- There is probably some sort of fancy list comprehension I could have done for
+  both parts but this way was totally fine.
 
 ## Part 1
 
