@@ -43,6 +43,24 @@ def part_2(mem: list[str]) -> int:
 
     print(all_matches)
 
+    is_mul_enabled = True
+
+    for m in all_matches:
+        match m:
+            case str(x) if "mul" in x:
+                print(f"Handle mul {is_mul_enabled}")
+                if not is_mul_enabled:
+                    continue
+                pass
+            case str(x) if "do()" in x:
+                print("Mul is enabled")
+                is_mul_enabled = True
+            case str(x) if "don't()" in x:
+                print("Mul is disabled")
+                is_mul_enabled = False
+            case _:
+                print(f"Idk, what that instruction is {m}")
+
     total = 0
 
     return total

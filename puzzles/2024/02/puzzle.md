@@ -5,6 +5,7 @@
 Pt 1 ~18 min
 
 - could make `check_report` recursive
+- I think what I'm supposed to do is just make a different array
 
 ## Part 1
 
